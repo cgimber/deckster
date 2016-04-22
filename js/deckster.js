@@ -1,4 +1,3 @@
-
 /* globals
 ---------------------------------------------------------------------*/
 var transparent = new Color(0, 0);
@@ -8,6 +7,17 @@ var deckster = {
     height: 300,
     width: 100
 };
+
+init();
+
+/* init
+---------------------------------------------------------------------*/
+function init() {
+    newTemplate(deckster.width, deckster.height);
+    // newDeck1();
+    newDeck2(deckster.width, deckster.height);
+    exportLayer = new Layer([deck]);
+}
 
 /* draw grid?
 ---------------------------------------------------------------------*/
@@ -24,8 +34,6 @@ var deckster = {
 
 /* draw template
 ---------------------------------------------------------------------*/
-newTemplate(deckster.width, deckster.height);
-
 function newTemplate(w, h) {
     template = new Path.Rectangle(view.center, [w, h]);
     template.name = 'template';
@@ -51,8 +59,6 @@ function newTemplate(w, h) {
 
 /* draw deck – method 1: clone and modify the template
 ---------------------------------------------------------------------*/
-newDeck1();
-
 function newDeck1() {
     deck = template.clone();
     deck.name = 'deck';
@@ -75,7 +81,6 @@ function newDeck1() {
 
 /* draw deck – method 2: draw half a path and reflect along y-axis
 ---------------------------------------------------------------------*/
-// newDeck2(deckster.width, deckster.height);
 
 function newDeck2(w, h) {
     deck = new Path();
@@ -123,7 +128,7 @@ var smooth_t = new PointText({
     content: 'smooth?',
     point: view.bounds.bottomCenter + [0, -100],
     justification: 'center',
-    fontSize: 20,
+    fontSize: 18,
     fillColor: 'black'
 });
 var smooth_bg = new Path.Rectangle(smooth_t.position, [smooth_t.bounds.width + 30, smooth_t.bounds.height + 10]);
@@ -140,7 +145,7 @@ var download_t = new PointText({
     content: 'download',
     point: view.bounds.bottomCenter + [0, -40],
     justification: 'center',
-    fontSize: 20,
+    fontSize: 18,
     fillColor: 'black'
 });
 var download_bg = new Path.Rectangle(download_t.position, [download_t.bounds.width + 30, download_t.bounds.height + 10]);
@@ -178,7 +183,7 @@ smooth_btn.onMouseLeave = function(event) {
 /* download button
 ---------------------------------------------------------------------*/
 download_btn.onClick = function(event) {
-    // downloadAsSVG();
+    downloadAsSVG();
 };
 // hover state
 download_btn.onMouseEnter = function(event) {
@@ -218,24 +223,18 @@ function inspectPoint(event) {
     }
 }
 
-// // save SVG from paper.js as a file
-// // via http://www.mikechambers.com/blog/2014/07/01/saving-svg-content-from-paper.js/
-// function downloadAsSVG(fileName) {
-//    if(!fileName) {
-//        fileName = "paperjs.svg";
-//    }
-//    var target = project.activeLayer.children['deck'];
-//    var url = "data:image/svg+xml;utf8," + encodeURIComponent(target.exportSVG({asString:true}));
-//    console.log(project);
-//    console.log(target);
-//    console.log(url);
+// save SVG from paper.js as a file via FileSaver.js
+function downloadAsSVG(fileName) {
+    if (!fileName) {
+        fileName = "deckster.svg";
+    }
+    var target = project.activeLayer.children['deck'];
+    var svg = '<svg x="0" y="0" width="800" height="800" version="1.1" xmlns="http://www.w3.org/2000/svg">' + target.exportSVG({ asString: true }) + '</svg>';
+    var url = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 
-//    var link = document.querySelectorAll('#deck-svg');
-//    link.download = fileName;
-//    link.setAttribute('href', url);
-//    link.href = url;
-//    link.click();
-// }
+    var blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    saveAs(blob, fileName);
+}
 
 // returns a random number between min (inclusive) and max (exclusive)
 function getRandom(min, max) {
