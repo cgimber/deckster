@@ -1,13 +1,17 @@
 /* globals
 ---------------------------------------------------------------------*/
-var transparent = new Color(0, 0);
 var center = new Point(view.bounds.center);
-var template, deck;
+var template, deck, holes;
 var deckster = {
-    height: 300,
-    width: 100,
+    scalar: 15, // pixels : inches
+    height: 25.5, // inches
+    width: 8.5, // inches
+    wheelBase: 15, // inches
     xSymmetry: true
 };
+deckster.height *= deckster.scalar;
+deckster.width *= deckster.scalar;
+deckster.wheelBase *= deckster.scalar;
 
 init();
 
@@ -40,7 +44,7 @@ function newTemplate(w, h) {
     template.name = 'template';
     template.position = center;
     template.strokeColor = 'red';
-    template.fillColor = transparent;
+    template.fill = 'none';
 
     template.insertSegment(0, center + [0, h / 2]);
     template.insertSegment(2, center + [-w / 2, h / 4]);
@@ -72,13 +76,11 @@ function newDeck1(w, h) {
     // toggle selection on click
     deck.onClick = function(event) {
         this.selected = true;
-        // this.smooth();
     };
 }
 
 /* draw deck – method 2: draw half a path and reflect along y-axis
 ---------------------------------------------------------------------*/
-
 function newDeck2(w, h) {
     deck = new Path();
     deck.name = 'deck';
@@ -108,14 +110,12 @@ function newDeck2(w, h) {
     // toggle selection on click
     deck.onClick = function(event) {
         this.selected = true;
-        // this.smooth();
     };
 }
 
 
 /* draw deck – method 3: draw a path w/ or w/o symmetry
 ---------------------------------------------------------------------*/
-
 function newDeck3(w, h) {
     deck = new Path();
     deck.name = 'deck';
@@ -158,11 +158,45 @@ function newDeck3(w, h) {
 
     deck.position = center;
 
+    holes = mountingHoles(deckster.wheelBase);
+    // if (holes.bounds.height < deck.bounds.height) {
+    //     holes.pivot = holes.bounds.bottomCenter;
+    //     // holes.position = deck.bounds.bottomCenter - [0, getRandom(0.75, 1) * (20 * deckster.scalar - deckster.wheelBase)];
+    //     holes.position = deck.bounds.bottomCenter - [0, (20 * deckster.scalar - deckster.wheelBase)];
+    // }
+    // deck.subtract(holes);
+
     // toggle selection on click
     deck.onClick = function(event) {
         this.selected = true;
-        // this.smooth();
     };
+}
+
+function mountingHoles(wheelBase) {
+    var mountWidth = 1.625 * deckster.scalar;
+    var mountHeight = 2.125 * deckster.scalar;
+    var holeRadius = 0.10 * deckster.scalar;
+
+    var mountRect = new Path.Rectangle(center, [mountWidth, mountHeight]);
+    var hole_topLeft = new Path.Circle(mountRect.bounds.topLeft, holeRadius);
+    var hole_topRight = new Path.Circle(mountRect.bounds.topRight, holeRadius);
+    var hole_bottomLeft = new Path.Circle(mountRect.bounds.bottomLeft, holeRadius);
+    var hole_bottomRight = new Path.Circle(mountRect.bounds.bottomRight, holeRadius);
+
+    var mount_top = new Group({
+        children: [hole_topLeft, hole_topRight, hole_bottomLeft, hole_bottomRight],
+        position: center - [0, (wheelBase + mountHeight) / 2]
+    });
+    var mount_bottom = mount_top.clone();
+    mount_bottom.position = center + [0, (wheelBase + mountHeight) / 2];
+
+    mountGroup = new Group({
+        children: [mount_top, mount_bottom],
+        fill: 'none',
+        strokeColor: new Color(255, 0, 0)
+    });
+
+    return mountGroup;
 }
 
 
@@ -286,7 +320,8 @@ xSymmetry_btn.onMouseLeave = function(event) {
 ---------------------------------------------------------------------*/
 newDeck_btn.onClick = function(event) {
     deck.remove();
-    smooth_t.content = 'smooth?';
+    holes.remove();
+    smooth_t.content = 'smooth';
     newDeck3(deckster.width, deckster.height);
 };
 // hover state
@@ -306,7 +341,7 @@ newDeck_btn.onMouseLeave = function(event) {
 smooth_btn.onClick = function(event) {
     if (deck.hasHandles()) {
         deck.clearHandles();
-        smooth_t.content = 'smooth?';
+        smooth_t.content = 'smooth';
     } else {
         deck.smooth();
         smooth_t.content = 'unsmooth';
