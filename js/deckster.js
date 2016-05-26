@@ -1,5 +1,5 @@
 /* globals
----------------------------------------------------------------------*/
+=====================================================================*/
 var center = new Point(view.bounds.center);
 var template, deck, holes;
 var deckster = {
@@ -7,7 +7,14 @@ var deckster = {
     height: 25.5, // inches
     width: 8.5, // inches
     wheelBase: 15, // inches
-    xSymmetry: true
+    xSymmetry: true,
+    isSmooth: false,
+    hitOptions: {
+        segments: true,
+        stroke: true,
+        fill: true,
+        tolerance: 5
+    }
 };
 deckster.height *= deckster.scalar;
 deckster.width *= deckster.scalar;
@@ -292,8 +299,71 @@ var download_btn = new Group([download_bg, download_t]);
 
 /* events
 =====================================================================*/
+/* globals
+---------------------------------------------------------------------*/
+var segment, oppSegment, path;
+var movePath = false;
+
 function onMouseDown(event) {
-    inspectPoint(event);
+    segment = path = null;
+    var hitResult = project.hitTest(event.point, deckster.hitOptions);
+    if (!hitResult || hitResult.item.name != 'deck')
+        return;
+
+    if (event.modifiers.shift) {
+        if (hitResult.type == 'segment') {
+            hitResult.segment.remove();
+        }
+        return;
+    }
+
+    if (hitResult) {
+        path = hitResult.item;
+        if (hitResult.type == 'segment') {
+            segment = hitResult.segment;
+            if (deckster.xSymmetry) {
+                var index = segment.index;
+                var oppIndex = path.segments.length - index;
+                if (oppIndex === index) oppIndex = 0;
+                if (index === 0) oppIndex = path.segments.length / 2;
+                oppSegment = path.segments[oppIndex];
+                console.log(index, oppIndex);
+            }
+        }
+        // else if (hitResult.type == 'stroke') {
+        //     // add a segment to the path at hit location
+        //     var location = hitResult.location;
+        //     segment = path.insert(location.index + 1, event.point);
+        //     if (deckster.isSmooth)
+        //         path.smooth();
+        // }
+    }
+    movePath = hitResult.type == 'fill';
+    if (movePath)
+        project.activeLayer.addChild(hitResult.item);
+}
+
+function onMouseMove(event) {
+    project.activeLayer.selected = false;
+    if (event.item && event.item.name == 'deck')
+        event.item.selected = true;
+}
+
+function onMouseDrag(event) {
+    if (segment) {
+        if (deckster.xSymmetry) {
+            if (segment.index === 0 || segment.index === path.segments.length / 2) { // top and bottom segments
+                segment.point += event.delta * [0, 1];
+                oppSegment.point += event.delta * [0, -1];
+            } else { // left/right segments
+                segment.point += event.delta;
+                oppSegment.point += event.delta * [-1, 1];
+            }
+        } else
+            segment.point += event.delta;
+        if (deckster.isSmooth)
+            path.smooth();
+    }
 }
 
 /* xSymmetry button
@@ -339,12 +409,14 @@ newDeck_btn.onMouseLeave = function(event) {
 /* smooth button
 ---------------------------------------------------------------------*/
 smooth_btn.onClick = function(event) {
-    if (deck.hasHandles()) {
+    if (deckster.isSmooth) {
         deck.clearHandles();
         smooth_t.content = 'smooth';
+        deckster.isSmooth = false;
     } else {
         deck.smooth();
         smooth_t.content = 'unsmooth';
+        deckster.isSmooth = true;
     }
 };
 // hover state
