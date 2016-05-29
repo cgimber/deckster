@@ -1,7 +1,7 @@
 /* globals
 =====================================================================*/
 var center = new Point(view.bounds.center);
-var template, deck, holes;
+var grid, template, deck, holes;
 var deckster = {
     scalar: 15, // pixels : inches
     height: 25.5, // inches
@@ -25,48 +25,66 @@ init();
 /* init
 ---------------------------------------------------------------------*/
 function init() {
-    newTemplate(deckster.width, deckster.height);
-    // newDeck1(deckster.width, deckster.height);
-    // newDeck2(deckster.width, deckster.height);
-    newDeck3(deckster.width, deckster.height);
+    grid = newGrid(50);
+    template = newTemplate(deckster.width, deckster.height);
+    deck = newDeck3(deckster.width, deckster.height);
 }
 
-/* draw grid?
+/* draw grid
 ---------------------------------------------------------------------*/
-// var gridDist = 50;
-// var gridDivs = 8;
-// var lines = [];
-// for (var i = 0; i < view.size.width; i + gridDist) {
-//  lines[i] = new Path.Line({
-//      from: [i, 0],
-//      to: [i, view.height],
-//      strokeColor: 'black'
-//  });
-// }
+function newGrid(interval, color) {
+    var g = new Group();
+    var gDist = 50;
+    if (interval) gDist = interval;
+
+    var gColor = new Color(0, 0, 255, 0.25);
+    if (color) gColor = new Color(color);
+
+    // create x lines
+    for (var i = 1; i * gDist < view.size.width; i++) {
+        var dX = i * gDist;
+        var lineX = new Path.Line({
+            from: [dX, 0],
+            to: [dX, view.bounds.height],
+            strokeColor: gColor,
+            dashArray: [5, 5]
+        });
+        g.addChild(lineX);
+    }
+    // create y lines
+    for (var j = 1; j * gDist < view.size.height; j++) {
+        var dY = j * gDist;
+        var lineY = new Path.Line({
+            from: [0, dY],
+            to: [view.bounds.width, dY],
+            strokeColor: gColor,
+            dashArray: [5, 5]
+        });
+        g.addChild(lineY);
+    }
+
+    return g;
+}
 
 /* draw template
 ---------------------------------------------------------------------*/
 function newTemplate(w, h) {
-    template = new Path.Rectangle(view.center, [w, h]);
-    template.name = 'template';
-    template.position = center;
-    template.strokeColor = 'red';
-    template.fill = 'none';
+    var t = new Path.Rectangle(view.center, [w, h]);
+    t.name = 'template';
+    t.position = center;
+    t.strokeColor = 'red';
+    t.fill = 'none';
 
-    template.insertSegment(0, center + [0, h / 2]);
-    template.insertSegment(2, center + [-w / 2, h / 4]);
-    template.insertSegment(3, center + [-w / 2, 0]);
-    template.insertSegment(4, center + [-w / 2, -h / 4]);
-    template.insertSegment(6, center + [0, -h / 2]);
-    template.insertSegment(8, center + [w / 2, -h / 4]);
-    template.insertSegment(9, center + [w / 2, 0]);
-    template.insertSegment(10, center + [w / 2, h / 4]);
-    // template.smooth();
+    t.insertSegment(0, center + [0, h / 2]);
+    t.insertSegment(2, center + [-w / 2, h / 4]);
+    t.insertSegment(3, center + [-w / 2, 0]);
+    t.insertSegment(4, center + [-w / 2, -h / 4]);
+    t.insertSegment(6, center + [0, -h / 2]);
+    t.insertSegment(8, center + [w / 2, -h / 4]);
+    t.insertSegment(9, center + [w / 2, 0]);
+    t.insertSegment(10, center + [w / 2, h / 4]);
 
-    // toggle selection onClick event
-    template.onClick = function(event) {
-        this.selected = true;
-    };
+    return t;
 }
 
 /* draw deck – method 1: clone and randomly shift each point from the template
@@ -79,11 +97,6 @@ function newDeck1(w, h) {
     for (var i = 0; i < deck.segments.length; i++)
         deck.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
     deck.position = center;
-
-    // toggle selection on click
-    deck.onClick = function(event) {
-        this.selected = true;
-    };
 }
 
 /* draw deck – method 2: draw half a path and reflect along y-axis
@@ -113,70 +126,62 @@ function newDeck2(w, h) {
     rightSide.scale(-1, 1, rightSide.bounds.topRight);
     deck.join(rightSide);
     deck.position = center;
-
-    // toggle selection on click
-    deck.onClick = function(event) {
-        this.selected = true;
-    };
 }
 
 
 /* draw deck – method 3: draw a path w/ or w/o symmetry
 ---------------------------------------------------------------------*/
 function newDeck3(w, h) {
-    deck = new Path();
-    deck.name = 'deck';
-    deck.strokeColor = 'blue';
-    deck.fillColor = new Color(0, 1, 0, 0.5);
+    var d = new Path();
+    d.name = 'deck';
+    d.strokeColor = 'blue';
+    d.fillColor = new Color(0, 1, 0, 0.5);
 
     // draw the left side of the deck
-    deck.add(center + [0, h / 2]);
-    deck.add(center + [-w / 2, h / 2]);
-    deck.add(center + [-w / 2, h / 4]);
-    deck.add(center + [-w / 2, 0]);
-    deck.add(center + [-w / 2, -h / 4]);
-    deck.add(center + [-w / 2, -h / 2]);
-    deck.add(center + [0, -h / 2]);
+    d.add(center + [0, h / 2]);
+    d.add(center + [-w / 2, h / 2]);
+    d.add(center + [-w / 2, h / 4]);
+    d.add(center + [-w / 2, 0]);
+    d.add(center + [-w / 2, -h / 4]);
+    d.add(center + [-w / 2, -h / 2]);
+    d.add(center + [0, -h / 2]);
 
     if (deckster.xSymmetry) {
         // randomly shift each point on the left side of deck
-        for (var i = 0; i < deck.segments.length; i++) {
-            if (i === 0 || i === deck.segments.length - 1) // don't shift the tip of the tail or nose in the x direction
-                deck.segments[i].point += new Point(0, getRandom(-h / 8, h / 8));
+        for (var i = 0; i < d.segments.length; i++) {
+            if (i === 0 || i === d.segments.length - 1) // don't shift the tip of the tail or nose in the x direction
+                d.segments[i].point += new Point(0, getRandom(-h / 8, h / 8));
             else
-                deck.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
+                d.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
         }
         // reflect along y-axis
-        var rightSide = deck.clone();
+        var rightSide = d.clone();
         rightSide.scale(-1, 1, rightSide.bounds.topRight);
-        deck.join(rightSide);
+        d.join(rightSide);
     } else {
         // draw the right side of the deck
-        deck.add(center + [w / 2, -h / 2]);
-        deck.add(center + [w / 2, -h / 4]);
-        deck.add(center + [w / 2, 0]);
-        deck.add(center + [w / 2, h / 4]);
-        deck.add(center + [w / 2, h / 2]);
-        deck.closePath();
+        d.add(center + [w / 2, -h / 2]);
+        d.add(center + [w / 2, -h / 4]);
+        d.add(center + [w / 2, 0]);
+        d.add(center + [w / 2, h / 4]);
+        d.add(center + [w / 2, h / 2]);
+        d.closePath();
         // randomly shift each point on the deck
-        for (var i = 0; i < deck.segments.length; i++)
-            deck.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
+        for (var i = 0; i < d.segments.length; i++)
+            d.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
     }
 
-    deck.position = center;
+    d.position = center;
 
     holes = mountingHoles(deckster.wheelBase);
-    // if (holes.bounds.height < deck.bounds.height) {
+    // if (holes.bounds.height < d.bounds.height) {
     //     holes.pivot = holes.bounds.bottomCenter;
-    //     // holes.position = deck.bounds.bottomCenter - [0, getRandom(0.75, 1) * (20 * deckster.scalar - deckster.wheelBase)];
-    //     holes.position = deck.bounds.bottomCenter - [0, (20 * deckster.scalar - deckster.wheelBase)];
+    //     // holes.position = d.bounds.bottomCenter - [0, getRandom(0.75, 1) * (20 * deckster.scalar - deckster.wheelBase)];
+    //     holes.position = d.bounds.bottomCenter - [0, (20 * deckster.scalar - deckster.wheelBase)];
     // }
-    // deck.subtract(holes);
+    // d.subtract(holes);
 
-    // toggle selection on click
-    deck.onClick = function(event) {
-        this.selected = true;
-    };
+    return d;
 }
 
 function mountingHoles(wheelBase) {
@@ -267,16 +272,19 @@ var flip_btn = new Group([flip_bg, flip_t]);
 ---------------------------------------------------------------------*/
 var smooth_t = new PointText({
     content: 'smooth',
-    point: view.bounds.bottomLeft + [315, -45],
-    justification: 'center',
+    point: view.bounds.topLeft + [50, 120],
+    justification: 'left',
     fontSize: 20,
     fillColor: 'black'
 });
 var smooth_bg = new Path.Rectangle(smooth_t.position, [smooth_t.bounds.width + 30, smooth_t.bounds.height + 10]);
 smooth_bg.position = smooth_t.position;
-smooth_bg.fillColor = 'white';
+if (deckster.isSmooth)
+    smooth_bg.fillColor = new Color(0, 255, 0);
+else
+    smooth_bg.fillColor = new Color(255, 0, 0);
 smooth_bg.strokeColor = 'black';
-smooth_bg.strokeWidth = 2;
+smooth_t.fillColor = 'black';
 
 var smooth_btn = new Group([smooth_bg, smooth_t]);
 
@@ -310,12 +318,12 @@ function onMouseDown(event) {
     if (!hitResult || hitResult.item.name != 'deck')
         return;
 
-    if (event.modifiers.shift) {
-        if (hitResult.type == 'segment') {
-            hitResult.segment.remove();
-        }
-        return;
-    }
+    // if (event.modifiers.shift) {
+    //     if (hitResult.type == 'segment') {
+    //         hitResult.segment.remove();
+    //     }
+    //     return;
+    // }
 
     if (hitResult) {
         path = hitResult.item;
@@ -327,7 +335,7 @@ function onMouseDown(event) {
                 if (oppIndex === index) oppIndex = 0;
                 if (index === 0) oppIndex = path.segments.length / 2;
                 oppSegment = path.segments[oppIndex];
-                console.log(index, oppIndex);
+                // console.log(index, oppIndex);
             }
         }
         // else if (hitResult.type == 'stroke') {
@@ -354,7 +362,6 @@ function onMouseDrag(event) {
         if (deckster.xSymmetry) {
             if (segment.index === 0 || segment.index === path.segments.length / 2) { // top and bottom segments
                 segment.point += event.delta * [0, 1];
-                oppSegment.point += event.delta * [0, -1];
             } else { // left/right segments
                 segment.point += event.delta;
                 oppSegment.point += event.delta * [-1, 1];
@@ -391,8 +398,9 @@ xSymmetry_btn.onMouseLeave = function(event) {
 newDeck_btn.onClick = function(event) {
     deck.remove();
     holes.remove();
-    smooth_t.content = 'smooth';
-    newDeck3(deckster.width, deckster.height);
+    deck = newDeck3(deckster.width, deckster.height);
+    if (deckster.isSmooth)
+        deck.smooth();
 };
 // hover state
 newDeck_btn.onMouseEnter = function(event) {
@@ -411,11 +419,9 @@ newDeck_btn.onMouseLeave = function(event) {
 smooth_btn.onClick = function(event) {
     if (deckster.isSmooth) {
         deck.clearHandles();
-        smooth_t.content = 'smooth';
         deckster.isSmooth = false;
     } else {
         deck.smooth();
-        smooth_t.content = 'unsmooth';
         deckster.isSmooth = true;
     }
 };
@@ -426,7 +432,10 @@ smooth_btn.onMouseEnter = function(event) {
     smooth_t.fillColor = 'white';
 };
 smooth_btn.onMouseLeave = function(event) {
-    smooth_bg.fillColor = 'white';
+    if (deckster.isSmooth)
+        smooth_bg.fillColor = new Color(0, 255, 0);
+    else
+        smooth_bg.fillColor = new Color(255, 0, 0);
     smooth_bg.strokeColor = 'black';
     smooth_t.fillColor = 'black';
 };
