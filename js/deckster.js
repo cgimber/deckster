@@ -1,11 +1,10 @@
 /* globals
 =====================================================================*/
 var center = new Point(view.bounds.center);
-var grid, template, deck, holes;
+var grid, blank, deck, holes;
 var deckster = {
-    scalar: 15, // pixels : inches
-    height: 25.5, // inches
-    width: 8.5, // inches
+    height: 27, // inches
+    width: 9, // inches
     wheelBase: 15, // inches
     xSymmetry: true,
     isSmooth: false,
@@ -16,6 +15,7 @@ var deckster = {
         tolerance: 5
     }
 };
+deckster.scalar = 400 / deckster.height; // pixels : inches
 deckster.height *= deckster.scalar;
 deckster.width *= deckster.scalar;
 deckster.wheelBase *= deckster.scalar;
@@ -26,7 +26,7 @@ init();
 ---------------------------------------------------------------------*/
 function init() {
     grid = newGrid(50);
-    template = newTemplate(deckster.width, deckster.height);
+    blank = newBlank(deckster.width, deckster.height);
     deck = newDeck3(deckster.width, deckster.height);
 }
 
@@ -34,6 +34,7 @@ function init() {
 ---------------------------------------------------------------------*/
 function newGrid(interval, color) {
     var g = new Group();
+    g.name = 'grid';
     var gDist = 50;
     if (interval) gDist = interval;
 
@@ -66,31 +67,31 @@ function newGrid(interval, color) {
     return g;
 }
 
-/* draw template
+/* draw blank
 ---------------------------------------------------------------------*/
-function newTemplate(w, h) {
-    var t = new Path.Rectangle(view.center, [w, h]);
-    t.name = 'template';
-    t.position = center;
-    t.strokeColor = 'red';
-    t.fill = 'none';
+function newBlank(w, h) {
+    var b = new Path.Rectangle(view.center, [w, h]);
+    b.name = 'blank';
+    b.position = center;
+    b.strokeColor = 'red';
+    b.fill = 'none';
 
-    t.insertSegment(0, center + [0, h / 2]);
-    t.insertSegment(2, center + [-w / 2, h / 4]);
-    t.insertSegment(3, center + [-w / 2, 0]);
-    t.insertSegment(4, center + [-w / 2, -h / 4]);
-    t.insertSegment(6, center + [0, -h / 2]);
-    t.insertSegment(8, center + [w / 2, -h / 4]);
-    t.insertSegment(9, center + [w / 2, 0]);
-    t.insertSegment(10, center + [w / 2, h / 4]);
+    b.insertSegment(0, center + [0, h / 2]);
+    b.insertSegment(2, center + [-w / 2, h / 4]);
+    b.insertSegment(3, center + [-w / 2, 0]);
+    b.insertSegment(4, center + [-w / 2, -h / 4]);
+    b.insertSegment(6, center + [0, -h / 2]);
+    b.insertSegment(8, center + [w / 2, -h / 4]);
+    b.insertSegment(9, center + [w / 2, 0]);
+    b.insertSegment(10, center + [w / 2, h / 4]);
 
-    return t;
+    return b;
 }
 
-/* draw deck – method 1: clone and randomly shift each point from the template
+/* draw deck – method 1: clone and randomly shift each point from the blank
 ---------------------------------------------------------------------*/
 function newDeck1(w, h) {
-    deck = template.clone();
+    deck = blank.clone();
     deck.name = 'deck';
     deck.strokeColor = 'blue';
     deck.fillColor = new Color(0, 1, 0, 0.5);
@@ -134,7 +135,8 @@ function newDeck2(w, h) {
 function newDeck3(w, h) {
     var d = new Path();
     d.name = 'deck';
-    d.strokeColor = 'blue';
+    d.strokeColor = 'black';
+    // d.fillColor = 'black';
     d.fillColor = new Color(0, 1, 0, 0.5);
 
     // draw the left side of the deck
@@ -149,10 +151,16 @@ function newDeck3(w, h) {
     if (deckster.xSymmetry) {
         // randomly shift each point on the left side of deck
         for (var i = 0; i < d.segments.length; i++) {
-            if (i === 0 || i === d.segments.length - 1) // don't shift the tip of the tail or nose in the x direction
-                d.segments[i].point += new Point(0, getRandom(-h / 8, h / 8));
+            if (i === 0) // don't shift the bottom point in the x direction or beyond the blank
+                d.segments[i].point += new Point(0, -getRandom(0, h / 8));
+            else if (i === 1) // don't shift the bottom right point beyond the blank
+                d.segments[i].point += new Point(getRandom(0, w / 4), -getRandom(0, h / 8));
+            else if (i === d.segments.length - 2) // don't shift the top left point beyond the blank
+                d.segments[i].point += new Point(getRandom(0, w / 4), getRandom(0, h / 8));
+            else if (i === d.segments.length - 1) // don't shift the top point in the x direction or beyond the blank
+                d.segments[i].point += new Point(0, getRandom(0, h / 8));
             else
-                d.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
+                d.segments[i].point += new Point(getRandom(0, w / 4), getRandom(-h / 8, h / 8));
         }
         // reflect along y-axis
         var rightSide = d.clone();
@@ -166,14 +174,21 @@ function newDeck3(w, h) {
         d.add(center + [w / 2, h / 4]);
         d.add(center + [w / 2, h / 2]);
         d.closePath();
+
         // randomly shift each point on the deck
         for (var i = 0; i < d.segments.length; i++)
             d.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
-    }
 
+        // if not inside the blank, scale to fit
+        if (!d.isInside(blank.bounds)) {
+            var scalarX = w / d.bounds.width;
+            var scalarY = h / d.bounds.height;
+            d.scale(scalarX, scalarY);
+        }
+    }
     d.position = center;
 
-    holes = mountingHoles(deckster.wheelBase);
+    holes = newMountHoles(deckster.wheelBase);
     // if (holes.bounds.height < d.bounds.height) {
     //     holes.pivot = holes.bounds.bottomCenter;
     //     // holes.position = d.bounds.bottomCenter - [0, getRandom(0.75, 1) * (20 * deckster.scalar - deckster.wheelBase)];
@@ -184,7 +199,7 @@ function newDeck3(w, h) {
     return d;
 }
 
-function mountingHoles(wheelBase) {
+function newMountHoles(wheelBase) {
     var mountWidth = 1.625 * deckster.scalar;
     var mountHeight = 2.125 * deckster.scalar;
     var holeRadius = 0.10 * deckster.scalar;
@@ -196,16 +211,19 @@ function mountingHoles(wheelBase) {
     var hole_bottomRight = new Path.Circle(mountRect.bounds.bottomRight, holeRadius);
 
     var mount_top = new Group({
+        name: 'mount_top',
         children: [hole_topLeft, hole_topRight, hole_bottomLeft, hole_bottomRight],
         position: center - [0, (wheelBase + mountHeight) / 2]
     });
     var mount_bottom = mount_top.clone();
+    mount_bottom.name = 'mount_bottom';
     mount_bottom.position = center + [0, (wheelBase + mountHeight) / 2];
 
     mountGroup = new Group({
+        name: 'mount_group',
         children: [mount_top, mount_bottom],
-        fill: 'none',
-        strokeColor: new Color(255, 0, 0)
+        fillColor: 'white',
+        strokeColor: 'black'
     });
 
     return mountGroup;
