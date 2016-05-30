@@ -1,7 +1,7 @@
 /* globals
 =====================================================================*/
 var center = new Point(view.bounds.center);
-var grid, blank, deck, holes;
+var grid, blank, deck, holes, dims;
 var deckster = {
     height: 27, // inches
     width: 9, // inches
@@ -27,7 +27,8 @@ init();
 function init() {
     grid = newGrid(50);
     blank = newBlank(deckster.width, deckster.height);
-    deck = newDeck3(deckster.width, deckster.height);
+    deck = newDeck(deckster.width, deckster.height);
+    // displayDims(deck);
 }
 
 /* draw grid
@@ -35,10 +36,11 @@ function init() {
 function newGrid(interval, color) {
     var g = new Group();
     g.name = 'grid';
-    var gDist = 50;
+
+    var gDist = 50; // default distance between grid lines
     if (interval) gDist = interval;
 
-    var gColor = new Color(0, 0, 255, 0.25);
+    var gColor = new Color(0, 0, 255, 0.25); // default color
     if (color) gColor = new Color(color);
 
     // create x lines
@@ -70,11 +72,13 @@ function newGrid(interval, color) {
 /* draw blank
 ---------------------------------------------------------------------*/
 function newBlank(w, h) {
-    var b = new Path.Rectangle(view.center, [w, h]);
-    b.name = 'blank';
-    b.position = center;
-    b.strokeColor = 'red';
-    b.fill = 'none';
+    var b = new Path.Rectangle({
+        name: 'blank',
+        position: center,
+        size: [w, h],
+        strokeColor: 'red',
+        fill: 'none'
+    });
 
     b.insertSegment(0, center + [0, h / 2]);
     b.insertSegment(2, center + [-w / 2, h / 4]);
@@ -88,56 +92,14 @@ function newBlank(w, h) {
     return b;
 }
 
-/* draw deck – method 1: clone and randomly shift each point from the blank
+/* draw deck
 ---------------------------------------------------------------------*/
-function newDeck1(w, h) {
-    deck = blank.clone();
-    deck.name = 'deck';
-    deck.strokeColor = 'blue';
-    deck.fillColor = new Color(0, 1, 0, 0.5);
-    for (var i = 0; i < deck.segments.length; i++)
-        deck.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
-    deck.position = center;
-}
-
-/* draw deck – method 2: draw half a path and reflect along y-axis
----------------------------------------------------------------------*/
-function newDeck2(w, h) {
-    deck = new Path();
-    deck.name = 'deck';
-    deck.strokeColor = 'blue';
-    deck.fillColor = new Color(0, 1, 0, 0.5);
-
-    deck.add(center + [0, h / 2]);
-    deck.add(center + [-w / 2, h / 2]);
-    deck.add(center + [-w / 2, h / 4]);
-    deck.add(center + [-w / 2, 0]);
-    deck.add(center + [-w / 2, -h / 4]);
-    deck.add(center + [-w / 2, -h / 2]);
-    deck.add(center + [0, -h / 2]);
-
-    for (var i = 0; i < deck.segments.length; i++) {
-        if (i === 0 || i === deck.segments.length - 1) // don't shift the tip of the tail or nose in the x direction
-            deck.segments[i].point += new Point(0, getRandom(-h / 8, h / 8));
-        else
-            deck.segments[i].point += new Point(getRandom(-w / 8, w / 8), getRandom(-h / 8, h / 8));
-    }
-
-    var rightSide = deck.clone();
-    rightSide.scale(-1, 1, rightSide.bounds.topRight);
-    deck.join(rightSide);
-    deck.position = center;
-}
-
-
-/* draw deck – method 3: draw a path w/ or w/o symmetry
----------------------------------------------------------------------*/
-function newDeck3(w, h) {
-    var d = new Path();
-    d.name = 'deck';
-    d.strokeColor = 'black';
-    // d.fillColor = 'black';
-    d.fillColor = new Color(0, 1, 0, 0.5);
+function newDeck(w, h) {
+    var d = new Path({
+        name: 'deck',
+        strokeColor: 'black',
+        fillColor: new Color(0, 1, 0, 0.5)
+    });
 
     // draw the left side of the deck
     d.add(center + [0, h / 2]);
@@ -196,9 +158,13 @@ function newDeck3(w, h) {
     // }
     // d.subtract(holes);
 
+    dims = displayDims(d);
+
     return d;
 }
 
+/* draw mount holes
+---------------------------------------------------------------------*/
 function newMountHoles(wheelBase) {
     var mountWidth = 1.625 * deckster.scalar;
     var mountHeight = 2.125 * deckster.scalar;
@@ -227,6 +193,87 @@ function newMountHoles(wheelBase) {
     });
 
     return mountGroup;
+}
+
+/* draw height / width dimensions
+---------------------------------------------------------------------*/
+function displayDims(item) {
+    // remove any old dims for this item
+    if (project.activeLayer.children['dims_' + item.name])
+        project.activeLayer.children['dims_' + item.name].remove();
+
+    var widthInInches = truncateDecimals(item.bounds.width / deckster.scalar, 2) + ' in';
+    var heightInInches = truncateDecimals(item.bounds.height / deckster.scalar, 2) + ' in';
+
+    var widthLine = new Path.Line({
+        from: item.bounds.bottomLeft + [0, 50],
+        to: item.bounds.bottomRight + [0, 50],
+        strokeColor: 'red'
+    });
+
+    var heightLine = new Path.Line({
+        from: item.bounds.topLeft + [-50, 0],
+        to: item.bounds.bottomLeft + [-50, 0],
+        strokeColor: 'red'
+    });
+
+    var widthHandles = newHandles(widthLine);
+    var heightHandles = newHandles(heightLine);
+
+    var width_t = new PointText({
+        content: widthInInches,
+        point: widthLine.bounds.bottomCenter + [0, 35],
+        justification: 'center',
+        fontSize: 20,
+        fillColor: 'red'
+    });
+
+    var height_t = new PointText({
+        content: heightInInches,
+        point: heightLine.bounds.leftCenter + [-25, 0],
+        justification: 'right',
+        fontSize: 20,
+        fillColor: 'red'
+    });
+
+    var dimsGroup = new Group({
+        name: 'dims_' + item.name,
+        children: [widthLine, heightLine, widthHandles, heightHandles, widthHandles, width_t, height_t]
+    });
+
+    return dimsGroup;
+}
+
+/* draw handles for a line item
+---------------------------------------------------------------------*/
+function newHandles(line) {
+    var handle1, handle2;
+    if (line.bounds.width > line.bounds.height) { // handles along x-axis
+        handle1 = new Path.Line({
+            from: line.firstSegment.point + [0, -10],
+            to: line.firstSegment.point + [0, 10],
+            strokeColor: 'red'
+        });
+        handle2 = new Path.Line({
+            from: line.lastSegment.point + [0, -10],
+            to: line.lastSegment.point + [0, 10],
+            strokeColor: 'red'
+        });
+    } else { // handles along y-axis
+        handle1 = new Path.Line({
+            from: line.firstSegment.point + [-10, 0],
+            to: line.firstSegment.point + [10, 0],
+            strokeColor: 'red'
+        });
+        handle2 = new Path.Line({
+            from: line.lastSegment.point + [-10, 0],
+            to: line.lastSegment.point + [10, 0],
+            strokeColor: 'red'
+        });
+    }
+    handleGroup = new Group([handle1, handle2]);
+
+    return handleGroup;
 }
 
 
@@ -338,7 +385,14 @@ function onMouseDown(event) {
 
     // if (event.modifiers.shift) {
     //     if (hitResult.type == 'segment') {
-    //         hitResult.segment.remove();
+    //         if (hitResult.segment.hasHandles())
+    //             hitResult.segment.clearHandles();
+    //         else
+    //             hitResult.segment.smooth({
+    //                 type: 'continous',
+    //                 from: -1,
+    //                 to: 1
+    //             });
     //     }
     //     return;
     // }
@@ -386,8 +440,11 @@ function onMouseDrag(event) {
             }
         } else
             segment.point += event.delta;
+
         if (deckster.isSmooth)
             path.smooth();
+
+        displayDims(deck);
     }
 }
 
@@ -416,7 +473,7 @@ xSymmetry_btn.onMouseLeave = function(event) {
 newDeck_btn.onClick = function(event) {
     deck.remove();
     holes.remove();
-    deck = newDeck3(deckster.width, deckster.height);
+    deck = newDeck(deckster.width, deckster.height);
     if (deckster.isSmooth)
         deck.smooth();
 };
@@ -537,4 +594,15 @@ function downloadAsSVG(itemID) {
 // returns a random number between min (inclusive) and max (exclusive)
 function getRandom(min, max) {
     return Math.random() * (max - min) + min;
+}
+
+// via http://stackoverflow.com/questions/4912788/truncate-not-round-off-decimal-numbers-in-javascript
+function truncateDecimals(num, digits) {
+    var numS = num.toString(),
+        decPos = numS.indexOf('.'),
+        substrLength = decPos == -1 ? numS.length : 1 + decPos + digits,
+        trimmedResult = numS.substr(0, substrLength),
+        finalResult = isNaN(trimmedResult) ? 0 : trimmedResult;
+
+    return parseFloat(finalResult);
 }
