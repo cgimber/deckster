@@ -1,7 +1,7 @@
 /* globals
 =====================================================================*/
 var center = new Point(view.bounds.center);
-var grid, blank, deck, holes, dims;
+var grid, blank, deck, holes, deckDims, blankDims;
 var deckster = {
     height: 27, // inches
     width: 9, // inches
@@ -14,6 +14,15 @@ var deckster = {
         fill: true,
         tolerance: 5
     }
+};
+var colors = {
+    disabled: new Color(1, 0, 0),
+    enabled: new Color(0, 1, 0),
+    blank: new Color(0.13, 0.59, 0.95, 0.75),
+    deck: new Color(0, 0, 0),
+    holes: new Color(1, 1, 1),
+    transparent: new Color(1, 1, 1, 0),
+    grey_50: new Color(0, 0, 0, 0.25)
 };
 deckster.scalar = 400 / deckster.height; // pixels : inches
 deckster.height *= deckster.scalar;
@@ -28,7 +37,6 @@ function init() {
     grid = newGrid(50);
     blank = newBlank(deckster.width, deckster.height);
     deck = newDeck(deckster.width, deckster.height);
-    // displayDims(deck);
 }
 
 /* draw grid
@@ -76,8 +84,10 @@ function newBlank(w, h) {
         name: 'blank',
         position: center,
         size: [w, h],
-        strokeColor: 'red',
-        fill: 'none'
+        // dashArray: [5, 5],
+        strokeColor: colors.grey_50,
+        strokeWidth: 2,
+        fillColor: colors.transparent
     });
 
     b.insertSegment(0, center + [0, h / 2]);
@@ -89,6 +99,14 @@ function newBlank(w, h) {
     b.insertSegment(9, center + [w / 2, 0]);
     b.insertSegment(10, center + [w / 2, h / 4]);
 
+    blankDims = displayDims(b, colors.blank);
+
+    // hide dims when not moused over
+    blankDims.visible = false;
+    b.onMouseLeave = function() {
+        blankDims.visible = false;
+    };
+
     return b;
 }
 
@@ -98,7 +116,8 @@ function newDeck(w, h) {
     var d = new Path({
         name: 'deck',
         strokeColor: 'black',
-        fillColor: new Color(0, 1, 0, 0.5)
+        strokeWidth: 2,
+        fillColor: colors.deck
     });
 
     // draw the left side of the deck
@@ -125,9 +144,9 @@ function newDeck(w, h) {
                 d.segments[i].point += new Point(getRandom(0, w / 4), getRandom(-h / 8, h / 8));
         }
         // reflect along y-axis
-        var rightSide = d.clone();
-        rightSide.scale(-1, 1, rightSide.bounds.topRight);
-        d.join(rightSide);
+        var rtSide = d.clone();
+        rtSide.scale(-1, 1, rtSide.bounds.topRight);
+        d.join(rtSide);
     } else {
         // draw the right side of the deck
         d.add(center + [w / 2, -h / 2]);
@@ -150,6 +169,9 @@ function newDeck(w, h) {
     }
     d.position = center;
 
+    if (deckster.isSmooth)
+        d.smooth();
+
     holes = newMountHoles(deckster.wheelBase);
     // if (holes.bounds.height < d.bounds.height) {
     //     holes.pivot = holes.bounds.bottomCenter;
@@ -158,7 +180,14 @@ function newDeck(w, h) {
     // }
     // d.subtract(holes);
 
-    dims = displayDims(d);
+    deckDims = displayDims(d);
+    checkDeckDims(d, deckDims);
+
+    // hide dims when not moused over
+    deckDims.visible = false;
+    d.onMouseLeave = function() {
+        deckDims.visible = false;
+    };
 
     return d;
 }
@@ -166,114 +195,172 @@ function newDeck(w, h) {
 /* draw mount holes
 ---------------------------------------------------------------------*/
 function newMountHoles(wheelBase) {
-    var mountWidth = 1.625 * deckster.scalar;
-    var mountHeight = 2.125 * deckster.scalar;
+    var mWidth = 1.625 * deckster.scalar;
+    var mHeight = 2.125 * deckster.scalar;
     var holeRadius = 0.10 * deckster.scalar;
 
-    var mountRect = new Path.Rectangle(center, [mountWidth, mountHeight]);
-    var hole_topLeft = new Path.Circle(mountRect.bounds.topLeft, holeRadius);
-    var hole_topRight = new Path.Circle(mountRect.bounds.topRight, holeRadius);
-    var hole_bottomLeft = new Path.Circle(mountRect.bounds.bottomLeft, holeRadius);
-    var hole_bottomRight = new Path.Circle(mountRect.bounds.bottomRight, holeRadius);
+    var mRect = new Path.Rectangle(center, [mWidth, mHeight]);
+    var hole1 = new Path.Circle(mRect.bounds.topLeft, holeRadius);
+    var hole2 = new Path.Circle(mRect.bounds.topRight, holeRadius);
+    var hole3 = new Path.Circle(mRect.bounds.bottomLeft, holeRadius);
+    var hole4 = new Path.Circle(mRect.bounds.bottomRight, holeRadius);
 
-    var mount_top = new Group({
+    var mTop = new Group({
         name: 'mount_top',
-        children: [hole_topLeft, hole_topRight, hole_bottomLeft, hole_bottomRight],
-        position: center - [0, (wheelBase + mountHeight) / 2]
+        children: [hole1, hole2, hole3, hole4],
+        position: center - [0, (wheelBase + mHeight) / 2]
     });
-    var mount_bottom = mount_top.clone();
-    mount_bottom.name = 'mount_bottom';
-    mount_bottom.position = center + [0, (wheelBase + mountHeight) / 2];
+    var mBottom = mTop.clone();
+    mBottom.name = 'mount_bottom';
+    mBottom.position = center + [0, (wheelBase + mHeight) / 2];
 
-    mountGroup = new Group({
+    mGroup = new Group({
         name: 'mount_group',
-        children: [mount_top, mount_bottom],
-        fillColor: 'white',
-        strokeColor: 'black'
+        children: [mTop, mBottom],
+        fillColor: colors.holes,
+        strokeColor: colors.holes
     });
 
-    return mountGroup;
+    return mGroup;
 }
 
 /* draw height / width dimensions
 ---------------------------------------------------------------------*/
-function displayDims(item) {
+function displayDims(item, color) {
     // remove any old dims for this item
-    if (project.activeLayer.children['dims_' + item.name])
-        project.activeLayer.children['dims_' + item.name].remove();
+    if (project.activeLayer.children[item.name + '_dims'])
+        project.activeLayer.children[item.name + '_dims'].remove();
 
-    var widthInInches = truncateDecimals(item.bounds.width / deckster.scalar, 2) + ' in';
-    var heightInInches = truncateDecimals(item.bounds.height / deckster.scalar, 2) + ' in';
+    var wInches = truncateDecimals(item.bounds.width / deckster.scalar, 2) + ' in';
+    var hInches = truncateDecimals(item.bounds.height / deckster.scalar, 2) + ' in';
+    var dimsColor = colors.enabled;
+    if (color) dimsColor = color;
 
-    var widthLine = new Path.Line({
+    // create width items
+    var wLine = new Path.Line({
+        name: 'line_w',
         from: item.bounds.bottomLeft + [0, 50],
         to: item.bounds.bottomRight + [0, 50],
-        strokeColor: 'red'
+        strokeColor: dimsColor,
+        strokeWidth: 2
     });
 
-    var heightLine = new Path.Line({
-        from: item.bounds.topLeft + [-50, 0],
-        to: item.bounds.bottomLeft + [-50, 0],
-        strokeColor: 'red'
-    });
+    var wHandles = newHandles(wLine);
 
-    var widthHandles = newHandles(widthLine);
-    var heightHandles = newHandles(heightLine);
-
-    var width_t = new PointText({
-        content: widthInInches,
-        point: widthLine.bounds.bottomCenter + [0, 35],
+    var wText = new PointText({
+        name: 'text_w',
+        content: wInches,
+        point: wLine.bounds.bottomCenter + [0, 35],
         justification: 'center',
         fontSize: 20,
-        fillColor: 'red'
+        fillColor: dimsColor
     });
 
-    var height_t = new PointText({
-        content: heightInInches,
-        point: heightLine.bounds.leftCenter + [-25, 0],
+    var wGroup = new Group({
+        name: 'width',
+        children: [wLine, wHandles, wText]
+    });
+
+    // create height items
+    var hLine = new Path.Line({
+        name: 'line_h',
+        from: item.bounds.topLeft + [-50, 0],
+        to: item.bounds.bottomLeft + [-50, 0],
+        strokeColor: dimsColor,
+        strokeWidth: 2
+    });
+
+    var hHandles = newHandles(hLine);
+
+    var hText = new PointText({
+        name: 'text_h',
+        content: hInches,
+        point: hLine.bounds.leftCenter + [-25, 0],
         justification: 'right',
         fontSize: 20,
-        fillColor: 'red'
+        fillColor: dimsColor
+    });
+
+    var hGroup = new Group({
+        name: 'height',
+        children: [hLine, hHandles, hText]
     });
 
     var dimsGroup = new Group({
-        name: 'dims_' + item.name,
-        children: [widthLine, heightLine, widthHandles, heightHandles, widthHandles, width_t, height_t]
+        name: item.name + '_dims',
+        children: [wGroup, hGroup]
     });
 
     return dimsGroup;
 }
 
+/* check deck dimensions and update the colors
+---------------------------------------------------------------------*/
+function checkDeckDims(deckItem, deckDims) {
+    if (!deckItem.isInside(blank.bounds)) {
+        console.log("OH SHIZAH: this deck won't fit on your blank");
+
+        var wGroup = deckDims.children['width'];
+        var wLine = wGroup.children['line_w'];
+        var hGroup = deckDims.children['height'];
+        var hLine = hGroup.children['line_h'];
+
+        // check width
+        if (deckItem.bounds.left < blank.bounds.left || deckItem.bounds.right > blank.bounds.right) {
+            wLine.strokeColor = colors.disabled;
+            wGroup.children['line_w_handles'].strokeColor = colors.disabled;
+            wGroup.children['text_w'].fillColor = colors.disabled;
+        }
+        // check height
+        if (deckItem.bounds.top < blank.bounds.top || deckItem.bounds.bottom > blank.bounds.bottom) {
+            hLine.strokeColor = colors.disabled;
+            hGroup.children['line_h_handles'].strokeColor = colors.disabled;
+            hGroup.children['text_h'].fillColor = colors.disabled;
+        }
+    }
+}
+
 /* draw handles for a line item
 ---------------------------------------------------------------------*/
 function newHandles(line) {
-    var handle1, handle2;
+    var h1, h2;
     if (line.bounds.width > line.bounds.height) { // handles along x-axis
-        handle1 = new Path.Line({
+        h1 = new Path.Line({
+            name: line.name + '_handle1',
             from: line.firstSegment.point + [0, -10],
             to: line.firstSegment.point + [0, 10],
-            strokeColor: 'red'
+            strokeColor: line.strokeColor,
+            strokeWidth: line.strokeWidth
         });
-        handle2 = new Path.Line({
+        h2 = new Path.Line({
+            name: line.name + '_handle2',
             from: line.lastSegment.point + [0, -10],
             to: line.lastSegment.point + [0, 10],
-            strokeColor: 'red'
+            strokeColor: line.strokeColor,
+            strokeWidth: line.strokeWidth
         });
     } else { // handles along y-axis
-        handle1 = new Path.Line({
+        h1 = new Path.Line({
+            name: line.name + '_handle1',
             from: line.firstSegment.point + [-10, 0],
             to: line.firstSegment.point + [10, 0],
-            strokeColor: 'red'
+            strokeColor: line.strokeColor,
+            strokeWidth: line.strokeWidth
         });
-        handle2 = new Path.Line({
+        h2 = new Path.Line({
+            name: line.name + '_handle2',
             from: line.lastSegment.point + [-10, 0],
             to: line.lastSegment.point + [10, 0],
-            strokeColor: 'red'
+            strokeColor: line.strokeColor,
+            strokeWidth: line.strokeWidth
         });
     }
-    handleGroup = new Group([handle1, handle2]);
+    hGroup = new Group({
+        name: line.name + '_handles',
+        children: [h1, h2]
+    });
 
-    return handleGroup;
+    return hGroup;
 }
 
 
@@ -291,13 +378,55 @@ var xSymmetry_t = new PointText({
 var xSymmetry_bg = new Path.Rectangle(xSymmetry_t.position, [xSymmetry_t.bounds.width + 30, xSymmetry_t.bounds.height + 10]);
 xSymmetry_bg.position = xSymmetry_t.position;
 if (deckster.xSymmetry)
-    xSymmetry_bg.fillColor = new Color(0, 255, 0);
+    xSymmetry_bg.fillColor = colors.enabled;
 else
-    xSymmetry_bg.fillColor = new Color(255, 0, 0);
+    xSymmetry_bg.fillColor = colors.disabled;
 xSymmetry_bg.strokeColor = 'black';
 xSymmetry_bg.strokeWidth = 2;
 
 var xSymmetry_btn = new Group([xSymmetry_bg, xSymmetry_t]);
+
+/* toggle blank button
+---------------------------------------------------------------------*/
+var toggleBlank_t = new PointText({
+    content: 'toggle blank',
+    point: view.bounds.topLeft + [50, 185],
+    justification: 'left',
+    fontSize: 20,
+    fillColor: 'black'
+});
+var toggleBlank_bg = new Path.Rectangle(toggleBlank_t.position, [toggleBlank_t.bounds.width + 30, toggleBlank_t.bounds.height + 10]);
+toggleBlank_bg.position = toggleBlank_t.position;
+// if (blank.visible)
+//     toggleBlank_bg.fillColor = colors.enabled;
+// else
+//     toggleBlank_bg.fillColor = colors.disabled;
+toggleBlank_bg.fillColor = 'white';
+toggleBlank_bg.strokeColor = 'black';
+toggleBlank_bg.strokeWidth = 2;
+
+var toggleBlank_btn = new Group([toggleBlank_bg, toggleBlank_t]);
+
+/* toggle grid button
+---------------------------------------------------------------------*/
+var toggleGrid_t = new PointText({
+    content: 'toggle grid',
+    point: view.bounds.topLeft + [50, 250],
+    justification: 'left',
+    fontSize: 20,
+    fillColor: 'black'
+});
+var toggleGrid_bg = new Path.Rectangle(toggleGrid_t.position, [toggleGrid_t.bounds.width + 30, toggleGrid_t.bounds.height + 10]);
+toggleGrid_bg.position = toggleGrid_t.position;
+// if (grid.visible)
+//     toggleGrid_bg.fillColor = colors.enabled;
+// else
+//     toggleGrid_bg.fillColor = colors.disabled;
+toggleGrid_bg.fillColor = 'white';
+toggleGrid_bg.strokeColor = 'black';
+toggleGrid_bg.strokeWidth = 2;
+
+var toggleGrid_btn = new Group([toggleGrid_bg, toggleGrid_t]);
 
 /* newDeck button
 ---------------------------------------------------------------------*/
@@ -345,11 +474,11 @@ var smooth_t = new PointText({
 var smooth_bg = new Path.Rectangle(smooth_t.position, [smooth_t.bounds.width + 30, smooth_t.bounds.height + 10]);
 smooth_bg.position = smooth_t.position;
 if (deckster.isSmooth)
-    smooth_bg.fillColor = new Color(0, 255, 0);
+    smooth_bg.fillColor = colors.enabled;
 else
-    smooth_bg.fillColor = new Color(255, 0, 0);
+    smooth_bg.fillColor = colors.disabled;
 smooth_bg.strokeColor = 'black';
-smooth_t.fillColor = 'black';
+smooth_bg.strokeWidth = 2;
 
 var smooth_btn = new Group([smooth_bg, smooth_t]);
 
@@ -418,15 +547,23 @@ function onMouseDown(event) {
         //         path.smooth();
         // }
     }
-    movePath = hitResult.type == 'fill';
-    if (movePath)
-        project.activeLayer.addChild(hitResult.item);
 }
 
 function onMouseMove(event) {
     project.activeLayer.selected = false;
-    if (event.item && event.item.name == 'deck')
-        event.item.selected = true;
+    blankDims.visible = false;
+    deckDims.visible = false;
+
+    if (event.item) {
+        if (event.item.name == 'blank') {
+            blankDims.visible = true;
+            event.item.selected = true;
+        } else if (event.item.name == 'deck') {
+            deckDims.visible = true;
+            event.item.selected = true;
+        }
+    }
+
 }
 
 function onMouseDrag(event) {
@@ -444,7 +581,8 @@ function onMouseDrag(event) {
         if (deckster.isSmooth)
             path.smooth();
 
-        displayDims(deck);
+        deckDims = displayDims(deck);
+        checkDeckDims(deck, deckDims);
     }
 }
 
@@ -461,11 +599,53 @@ xSymmetry_btn.onMouseEnter = function(event) {
 };
 xSymmetry_btn.onMouseLeave = function(event) {
     if (deckster.xSymmetry)
-        xSymmetry_bg.fillColor = new Color(0, 255, 0);
+        xSymmetry_bg.fillColor = colors.enabled;
     else
-        xSymmetry_bg.fillColor = new Color(255, 0, 0);
+        xSymmetry_bg.fillColor = colors.disabled;
     xSymmetry_bg.strokeColor = 'black';
     xSymmetry_t.fillColor = 'black';
+};
+
+/* toggle blank button
+---------------------------------------------------------------------*/
+toggleBlank_btn.onClick = function(event) {
+    blank.visible = !blank.visible;
+};
+// hover state
+toggleBlank_btn.onMouseEnter = function(event) {
+    toggleBlank_bg.fillColor = 'black';
+    toggleBlank_bg.strokeColor = 'none';
+    toggleBlank_t.fillColor = 'white';
+};
+toggleBlank_btn.onMouseLeave = function(event) {
+    // if (blank.visible)
+    //     toggleBlank_bg.fillColor = colors.enabled;
+    // else
+    //     toggleBlank_bg.fillColor = colors.disabled;
+    toggleBlank_bg.fillColor = 'white';
+    toggleBlank_bg.strokeColor = 'black';
+    toggleBlank_t.fillColor = 'black';
+};
+
+/* toggle grid button
+---------------------------------------------------------------------*/
+toggleGrid_btn.onClick = function(event) {
+    grid.visible = !grid.visible;
+};
+// hover state
+toggleGrid_btn.onMouseEnter = function(event) {
+    toggleGrid_bg.fillColor = 'black';
+    toggleGrid_bg.strokeColor = 'none';
+    toggleGrid_t.fillColor = 'white';
+};
+toggleGrid_btn.onMouseLeave = function(event) {
+    // if (grid.visible)
+    //     toggleGrid_bg.fillColor = colors.enabled;
+    // else
+    //     toggleGrid_bg.fillColor = colors.disabled;
+    toggleGrid_bg.fillColor = 'white';
+    toggleGrid_bg.strokeColor = 'black';
+    toggleGrid_t.fillColor = 'black';
 };
 
 /* newDeck button
@@ -474,8 +654,6 @@ newDeck_btn.onClick = function(event) {
     deck.remove();
     holes.remove();
     deck = newDeck(deckster.width, deckster.height);
-    if (deckster.isSmooth)
-        deck.smooth();
 };
 // hover state
 newDeck_btn.onMouseEnter = function(event) {
@@ -492,13 +670,14 @@ newDeck_btn.onMouseLeave = function(event) {
 /* smooth button
 ---------------------------------------------------------------------*/
 smooth_btn.onClick = function(event) {
-    if (deckster.isSmooth) {
+    if (deckster.isSmooth)
         deck.clearHandles();
-        deckster.isSmooth = false;
-    } else {
+    else
         deck.smooth();
-        deckster.isSmooth = true;
-    }
+
+    deckster.isSmooth = !deckster.isSmooth;
+    deckDims = displayDims(deck);
+    checkDeckDims(deck, deckDims);
 };
 // hover state
 smooth_btn.onMouseEnter = function(event) {
@@ -508,9 +687,9 @@ smooth_btn.onMouseEnter = function(event) {
 };
 smooth_btn.onMouseLeave = function(event) {
     if (deckster.isSmooth)
-        smooth_bg.fillColor = new Color(0, 255, 0);
+        smooth_bg.fillColor = colors.enabled;
     else
-        smooth_bg.fillColor = new Color(255, 0, 0);
+        smooth_bg.fillColor = colors.disabled;
     smooth_bg.strokeColor = 'black';
     smooth_t.fillColor = 'black';
 };
