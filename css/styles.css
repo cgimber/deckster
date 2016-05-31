@@ -55,7 +55,7 @@ body.isLoading {
   overflow: hidden; }
 
 .container-canvas {
-  background-color: #4dff06;
+  background-color: rgba(128, 128, 128, 0.5);
   width: 100vw;
   height: 100vh;
   display: -webkit-box;

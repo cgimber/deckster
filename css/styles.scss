@@ -53,7 +53,7 @@ body.isLoading {
 }
 
 .container-canvas {
-    background-color: #4dff06;
+    background-color: rgba(127.5, 127.5, 127.5, 0.5);
     width: 100vw;
     height: 100vh;
     @include display(flex);
