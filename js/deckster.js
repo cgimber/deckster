@@ -3,8 +3,8 @@
 var center = new Point(view.bounds.center);
 var grid, blank, deck, holes, deckDims, blankDims;
 var deckster = {
-    height: 27, // inches
-    width: 9, // inches
+    height: 27.5, // inches
+    width: 8.5, // inches
     wheelBase: 15, // inches
     xSymmetry: true,
     isSmooth: false,
@@ -654,6 +654,8 @@ newDeck_btn.onClick = function(event) {
     deck.remove();
     holes.remove();
     deck = newDeck(deckster.width, deckster.height);
+    deckDims = displayDims(deck);
+    checkDeckDims(deck, deckDims);
 };
 // hover state
 newDeck_btn.onMouseEnter = function(event) {
