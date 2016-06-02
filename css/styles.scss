@@ -53,7 +53,7 @@ body.isLoading {
 }
 
 .container-canvas {
-    background-color: rgba(127.5, 127.5, 127.5, 0.5);
+    background-color: rgba(0, 255, 0, 0.5);
     width: 100vw;
     height: 100vh;
     @include display(flex);
@@ -61,12 +61,51 @@ body.isLoading {
     @include align-items(center);
 }
 
-canvas {
+canvas,
+.modal-info {
+    height: 80rem;
+    width: 130rem;
     background-color: white;
-    height: 800px;
-    width: 800px;
-    // position: fixed;
+    border: 2px solid black;
+    box-shadow: 3px 3px 0 black;
+}
+
+canvas {
+    // display: none;
     z-index: 1;
+}
+
+.modal-info {
+    // display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: -40rem 0 0 -65rem;
+    padding: 10rem 30rem;
+    z-index: 9;
+    opacity: 0.95;
+}
+
+.icon-info {
+    position: absolute;
+    top: 158px;
+    right: 230px;
+    width: 35px;
+    height: 35px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    text-decoration: none;
+    border: 2px solid black;
+    box-shadow: 3px 3px 0 black;
+    color: black;
+    background: rgb(0, 255, 0);
+    z-index: 999;
+}
+
+.icon-info:hover {
+    color: white;
+    background: black;
 }
 
 ::-moz-selection {
@@ -123,6 +162,7 @@ a#deck-svg {
     left: 25%;
     z-index: 2;
 }
+
 
 /* media queries
 ---------------------------------------------------------------------*/

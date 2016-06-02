@@ -12,19 +12,20 @@ var deckster = {
         segments: true,
         stroke: true,
         fill: true,
-        tolerance: 5
+        tolerance: 15
     }
 };
 var colors = {
     disabled: new Color(1, 0, 0),
     enabled: new Color(0, 1, 0),
+    grid: new Color(1, 0, 0, 0.25),
     blank: new Color(0.13, 0.59, 0.95, 0.75),
-    deck: new Color(0, 0, 0),
-    holes: new Color(1, 1, 1),
+    deck: new Color(0, 1, 0, 0.5),
+    holes: 'black',
     transparent: new Color(1, 1, 1, 0),
     grey_50: new Color(0, 0, 0, 0.25)
 };
-deckster.scalar = 400 / deckster.height; // pixels : inches
+deckster.scalar = 500 / deckster.height; // pixels : inches
 deckster.height *= deckster.scalar;
 deckster.width *= deckster.scalar;
 deckster.wheelBase *= deckster.scalar;
@@ -34,7 +35,7 @@ init();
 /* init
 ---------------------------------------------------------------------*/
 function init() {
-    grid = newGrid(50);
+    grid = newGrid(50, colors.grid);
     blank = newBlank(deckster.width, deckster.height);
     deck = newDeck(deckster.width, deckster.height);
 }
@@ -233,14 +234,28 @@ function displayDims(item, color) {
 
     var wInches = truncateDecimals(item.bounds.width / deckster.scalar, 2) + ' in';
     var hInches = truncateDecimals(item.bounds.height / deckster.scalar, 2) + ' in';
+
+    var dimsMarginX = 200;
+    var dimsMarginY = 100;
+    var dimsPadding = 50;
+
     var dimsColor = colors.enabled;
     if (color) dimsColor = color;
 
     // create width items
+    var item_bottomLeft, item_bottomRight;
+    if (item.bounds.bottom + dimsPadding >= view.bounds.bottom - dimsMarginY) {
+        item_bottomLeft = new Point(item.bounds.left, view.bounds.bottom - dimsMarginY);
+        item_bottomRight = new Point(item.bounds.right, view.bounds.bottom - dimsMarginY);
+    } else {
+        item_bottomLeft = item.bounds.bottomLeft + [0, dimsPadding];
+        item_bottomRight = item.bounds.bottomRight + [0, dimsPadding];
+    }
+
     var wLine = new Path.Line({
         name: 'line_w',
-        from: item.bounds.bottomLeft + [0, 50],
-        to: item.bounds.bottomRight + [0, 50],
+        from: item_bottomLeft,
+        to: item_bottomRight,
         strokeColor: dimsColor,
         strokeWidth: 2
     });
@@ -252,6 +267,7 @@ function displayDims(item, color) {
         content: wInches,
         point: wLine.bounds.bottomCenter + [0, 35],
         justification: 'center',
+        fontFamily: 'audimat',
         fontSize: 20,
         fillColor: dimsColor
     });
@@ -262,10 +278,19 @@ function displayDims(item, color) {
     });
 
     // create height items
+    var item_topLeft, item_bottomLeft;
+    if (item.bounds.left - dimsPadding <= dimsMarginX) {
+        item_topLeft = new Point(dimsMarginX, item.bounds.top);
+        item_bottomLeft = new Point(dimsMarginX, item.bounds.bottom);
+    } else {
+        item_topLeft = item.bounds.topLeft + [-dimsPadding, 0];
+        item_bottomLeft = item.bounds.bottomLeft + [-dimsPadding, 0];
+    }
+
     var hLine = new Path.Line({
         name: 'line_h',
-        from: item.bounds.topLeft + [-50, 0],
-        to: item.bounds.bottomLeft + [-50, 0],
+        from: item_topLeft,
+        to: item_bottomLeft,
         strokeColor: dimsColor,
         strokeWidth: 2
     });
@@ -277,6 +302,7 @@ function displayDims(item, color) {
         content: hInches,
         point: hLine.bounds.leftCenter + [-25, 0],
         justification: 'right',
+        fontFamily: 'audimat',
         fontSize: 20,
         fillColor: dimsColor
     });
@@ -323,7 +349,7 @@ function checkDeckDims(deckItem, deckDims) {
 /* draw handles for a line item
 ---------------------------------------------------------------------*/
 function newHandles(line) {
-    var h1, h2;
+    var h1, h2, margin;
     if (line.bounds.width > line.bounds.height) { // handles along x-axis
         h1 = new Path.Line({
             name: line.name + '_handle1',
@@ -366,25 +392,43 @@ function newHandles(line) {
 
 /* GUI
 =====================================================================*/
+/* title
+---------------------------------------------------------------------*/
+var title_t = new PointText({
+    content: '– deckster v1.0 –',
+    point: view.bounds.topCenter + [0, 55],
+    justification: 'center',
+    fontFamily: 'audimat-bold',
+    fontSize: 20,
+    fillColor: 'black'
+});
+
 /* xSymmetry button
 ---------------------------------------------------------------------*/
 var xSymmetry_t = new PointText({
     content: 'x-symmetry',
     point: view.bounds.topLeft + [50, 55],
     justification: 'left',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var xSymmetry_bg = new Path.Rectangle(xSymmetry_t.position, [xSymmetry_t.bounds.width + 30, xSymmetry_t.bounds.height + 10]);
-xSymmetry_bg.position = xSymmetry_t.position;
+var xSymmetry_bg = new Path.Rectangle({
+    position: xSymmetry_t.position,
+    size: [xSymmetry_t.bounds.width + 30, xSymmetry_t.bounds.height + 10],
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+var xSymmetry_shadow = xSymmetry_bg.clone();
+xSymmetry_shadow.position += [3, 3];
+xSymmetry_shadow.fillColor = 'black';
+
 if (deckster.xSymmetry)
     xSymmetry_bg.fillColor = colors.enabled;
 else
     xSymmetry_bg.fillColor = colors.disabled;
-xSymmetry_bg.strokeColor = 'black';
-xSymmetry_bg.strokeWidth = 2;
 
-var xSymmetry_btn = new Group([xSymmetry_bg, xSymmetry_t]);
+var xSymmetry_btn = new Group([xSymmetry_shadow, xSymmetry_bg, xSymmetry_t]);
 
 /* toggle blank button
 ---------------------------------------------------------------------*/
@@ -392,20 +436,22 @@ var toggleBlank_t = new PointText({
     content: 'toggle blank',
     point: view.bounds.topLeft + [50, 185],
     justification: 'left',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var toggleBlank_bg = new Path.Rectangle(toggleBlank_t.position, [toggleBlank_t.bounds.width + 30, toggleBlank_t.bounds.height + 10]);
-toggleBlank_bg.position = toggleBlank_t.position;
-// if (blank.visible)
-//     toggleBlank_bg.fillColor = colors.enabled;
-// else
-//     toggleBlank_bg.fillColor = colors.disabled;
-toggleBlank_bg.fillColor = 'white';
-toggleBlank_bg.strokeColor = 'black';
-toggleBlank_bg.strokeWidth = 2;
+var toggleBlank_bg = new Path.Rectangle({
+    position: toggleBlank_t.position,
+    size: [toggleBlank_t.bounds.width + 30, toggleBlank_t.bounds.height + 10],
+    fillColor: 'white',
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+var toggleBlank_shadow = toggleBlank_bg.clone();
+toggleBlank_shadow.position += [3, 3];
+toggleBlank_shadow.fillColor = 'black';
 
-var toggleBlank_btn = new Group([toggleBlank_bg, toggleBlank_t]);
+var toggleBlank_btn = new Group([toggleBlank_shadow, toggleBlank_bg, toggleBlank_t]);
 
 /* toggle grid button
 ---------------------------------------------------------------------*/
@@ -413,20 +459,22 @@ var toggleGrid_t = new PointText({
     content: 'toggle grid',
     point: view.bounds.topLeft + [50, 250],
     justification: 'left',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var toggleGrid_bg = new Path.Rectangle(toggleGrid_t.position, [toggleGrid_t.bounds.width + 30, toggleGrid_t.bounds.height + 10]);
-toggleGrid_bg.position = toggleGrid_t.position;
-// if (grid.visible)
-//     toggleGrid_bg.fillColor = colors.enabled;
-// else
-//     toggleGrid_bg.fillColor = colors.disabled;
-toggleGrid_bg.fillColor = 'white';
-toggleGrid_bg.strokeColor = 'black';
-toggleGrid_bg.strokeWidth = 2;
+var toggleGrid_bg = new Path.Rectangle({
+    position: toggleGrid_t.position,
+    size: [toggleGrid_t.bounds.width + 30, toggleGrid_t.bounds.height + 10],
+    fillColor: 'white',
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+var toggleGrid_shadow = toggleGrid_bg.clone();
+toggleGrid_shadow.position += [3, 3];
+toggleGrid_shadow.fillColor = 'black';
 
-var toggleGrid_btn = new Group([toggleGrid_bg, toggleGrid_t]);
+var toggleGrid_btn = new Group([toggleGrid_shadow, toggleGrid_bg, toggleGrid_t]);
 
 /* newDeck button
 ---------------------------------------------------------------------*/
@@ -434,16 +482,22 @@ var newDeck_t = new PointText({
     content: 'new deck',
     point: view.bounds.bottomLeft + [90, -45],
     justification: 'center',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var newDeck_bg = new Path.Rectangle(newDeck_t.position, [newDeck_t.bounds.width + 30, newDeck_t.bounds.height + 10]);
-newDeck_bg.position = newDeck_t.position;
-newDeck_bg.fillColor = 'white';
-newDeck_bg.strokeColor = 'black';
-newDeck_bg.strokeWidth = 2;
+var newDeck_bg = new Path.Rectangle({
+    position: newDeck_t.position,
+    size: [newDeck_t.bounds.width + 30, newDeck_t.bounds.height + 10],
+    fillColor: 'white',
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+var newDeck_shadow = newDeck_bg.clone();
+newDeck_shadow.position += [3, 3];
+newDeck_shadow.fillColor = 'black';
 
-var newDeck_btn = new Group([newDeck_bg, newDeck_t]);
+var newDeck_btn = new Group([newDeck_shadow, newDeck_bg, newDeck_t]);
 
 /* flip button
 ---------------------------------------------------------------------*/
@@ -451,16 +505,22 @@ var flip_t = new PointText({
     content: 'flip',
     point: view.bounds.bottomLeft + [195, -45],
     justification: 'left',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var flip_bg = new Path.Rectangle(flip_t.position, [flip_t.bounds.width + 30, flip_t.bounds.height + 10]);
-flip_bg.position = flip_t.position;
-flip_bg.fillColor = 'white';
-flip_bg.strokeColor = 'black';
-flip_bg.strokeWidth = 2;
+var flip_bg = new Path.Rectangle({
+    position: flip_t.position,
+    size: [flip_t.bounds.width + 30, flip_t.bounds.height + 10],
+    fillColor: 'white',
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+var flip_shadow = flip_bg.clone();
+flip_shadow.position += [3, 3];
+flip_shadow.fillColor = 'black';
 
-var flip_btn = new Group([flip_bg, flip_t]);
+var flip_btn = new Group([flip_shadow, flip_bg, flip_t]);
 
 /* smooth button
 ---------------------------------------------------------------------*/
@@ -468,19 +528,27 @@ var smooth_t = new PointText({
     content: 'smooth',
     point: view.bounds.topLeft + [50, 120],
     justification: 'left',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var smooth_bg = new Path.Rectangle(smooth_t.position, [smooth_t.bounds.width + 30, smooth_t.bounds.height + 10]);
-smooth_bg.position = smooth_t.position;
+var smooth_bg = new Path.Rectangle({
+    position: smooth_t.position,
+    size: [smooth_t.bounds.width + 30, smooth_t.bounds.height + 10],
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+
 if (deckster.isSmooth)
     smooth_bg.fillColor = colors.enabled;
 else
     smooth_bg.fillColor = colors.disabled;
-smooth_bg.strokeColor = 'black';
-smooth_bg.strokeWidth = 2;
 
-var smooth_btn = new Group([smooth_bg, smooth_t]);
+var smooth_shadow = smooth_bg.clone();
+smooth_shadow.position += [3, 3];
+smooth_shadow.fillColor = 'black';
+
+var smooth_btn = new Group([smooth_shadow, smooth_bg, smooth_t]);
 
 /* download button
 ---------------------------------------------------------------------*/
@@ -488,16 +556,22 @@ var download_t = new PointText({
     content: 'download',
     point: view.bounds.bottomRight + [-50, -45],
     justification: 'right',
+    fontFamily: 'audimat',
     fontSize: 20,
     fillColor: 'black'
 });
-var download_bg = new Path.Rectangle(download_t.position, [download_t.bounds.width + 30, download_t.bounds.height + 10]);
-download_bg.position = download_t.position;
-download_bg.fillColor = 'white';
-download_bg.strokeColor = 'black';
-download_bg.strokeWidth = 2;
+var download_bg = new Path.Rectangle({
+    position: download_t.position,
+    size: [download_t.bounds.width + 30, download_t.bounds.height + 10],
+    fillColor: 'white',
+    strokeColor: 'black',
+    strokeWidth: 2
+});
+var download_shadow = download_bg.clone();
+download_shadow.position += [3, 3];
+download_shadow.fillColor = 'black';
 
-var download_btn = new Group([download_bg, download_t]);
+var download_btn = new Group([download_shadow, download_bg, download_t]);
 
 /* events
 =====================================================================*/
@@ -732,30 +806,6 @@ download_btn.onMouseLeave = function(event) {
 
 /* functions
 ---------------------------------------------------------------------*/
-// log the properties of matching point(s) in active layer and/or select targeted item(s)
-function inspectPoint(event) {
-    var children = project.activeLayer.children;
-    for (var i = 0; i < children.length; i++) {
-        var child = children[i];
-        var foundPoint = false;
-
-        if (child.className == 'Path') { // only search for points in path items
-            for (var j = 0; j < child.segments.length && !foundPoint; j++) {
-                // console.log("checking children[" + i + "].segments[" + j + "]");
-                if (child.segments[j].point.isClose(event.point, 5)) {
-                    var clickedPoint = child.segments[j].point;
-                    clickedPoint.selected = !clickedPoint.selected;
-                    if (clickedPoint.selected)
-                        console.log("children[" + i + "].segments[" + j + "]: " + clickedPoint);
-                    foundPoint = true;
-                }
-            }
-        }
-        if (event.point.isInside(view.bounds) && !event.point.isInside(child.bounds))
-            child.selected = false;
-    }
-}
-
 // save SVG from paper.js as a file via FileSaver.js
 function downloadAsSVG(itemID) {
     var target, fileName;

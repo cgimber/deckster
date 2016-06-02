@@ -11,14 +11,17 @@
     <link rel="stylesheet" href="css/vendor/normalize.css/normalize.css">
     <link rel="stylesheet" href="css/styles.css">
     <!--- jQuery -->
-    <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script> -->
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
     <!--- FileSaver.js -->
     <script type="text/javascript" src="js/vendor/FileSaver.min.js"></script>
     <!-- Paper.js -->
-    <script type="text/javascript" src="js/vendor/paper.min.js"></script>
+    <script type="text/javascript" src="js/vendor/paper-full.min.js"></script>
     <!-- PaperScript -->
     <script type="text/paperscript" src="js/deckster.js" canvas="paper"></script>
+    <!-- Main -->
+    <script type="text/javascript" src="js/main.js"></script>
 </head>
+
 <body>
     <!--[if lt IE 8]>
         <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
@@ -26,6 +29,17 @@
     <div class="container-canvas">
         <canvas id="paper" resize></canvas>
     </div>
+    <div class="modal-info">
+        <h1><i>deckster</i> is a tool for generative skateboard design.*</h1>
+        <ol>
+            <li>Hit NEW DECK to generate a new board</li>
+            <li>HOVER over the blank or board to see dimensions</li>
+            <li>FLIP, SMOOTH, or DRAG points around with your mouse to refine your new shape.</li>
+            <li>Change some parameters and SHARE your one-of-a-kind deck with a friend.</li>
+        <ol>
+        <p>*skateboard press not included :(</p>
+    </div>
+    <a class="icon-info" href="#">?</a>
     <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
     <!-- <script>
             (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
