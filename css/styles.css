@@ -96,6 +96,7 @@ canvas {
   z-index: 1; }
 
 .modal-info {
+  display: none;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -124,6 +125,12 @@ canvas {
   color: white;
   background: black; }
 
+.footnote {
+  color: #ccc; }
+
+hr.footnote {
+  margin-top: 32rem; }
+
 ::-moz-selection {
   background: #b3d4fc;
   text-shadow: none; }
@@ -131,6 +138,14 @@ canvas {
 ::selection {
   background: #b3d4fc;
   text-shadow: none; }
+
+hr {
+  display: block;
+  height: 2px;
+  border: 0;
+  border-top: 2px solid #ccc;
+  margin: 1em 0;
+  padding: 0; }
 
 audio,
 canvas,

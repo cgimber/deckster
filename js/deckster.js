@@ -631,7 +631,7 @@ function onMouseMove(event) {
     if (event.item) {
         if (event.item.name == 'blank') {
             blankDims.visible = true;
-            event.item.selected = true;
+            // event.item.selected = true;
         } else if (event.item.name == 'deck') {
             deckDims.visible = true;
             event.item.selected = true;
