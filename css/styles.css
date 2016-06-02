@@ -105,6 +105,10 @@ canvas {
   z-index: 9;
   opacity: 0.95; }
 
+.instructions {
+  margin-top: 10rem;
+  line-height: 2em; }
+
 .icon-info {
   position: absolute;
   top: 158px;
@@ -129,7 +133,7 @@ canvas {
   color: #ccc; }
 
 hr.footnote {
-  margin-top: 32rem; }
+  margin-top: 21rem; }
 
 ::-moz-selection {
   background: #b3d4fc;
