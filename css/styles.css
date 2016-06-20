@@ -22,6 +22,8 @@
   src: url("../fonts/audimat-bolditalic-webfont.eot?#iefix") format("embedded-opentype"), url("../fonts/audimat-bolditalic-webfont.woff") format("woff"), url("../fonts/audimat-bolditalic-webfont.ttf") format("truetype"); }
 /* colors
 ---------------------------------------------------------------------*/
+/* variables
+---------------------------------------------------------------------*/
 /*-------------------------------------------------------------------*/
 *,
 *:after,
@@ -86,8 +88,8 @@ body.isLoading {
 
 canvas,
 .modal-info {
-  height: 80rem;
-  width: 130rem;
+  width: 100rem;
+  height: calc(100vh - 200px);
   background-color: white;
   border: 2px solid black;
   box-shadow: 3px 3px 0 black; }
@@ -96,14 +98,20 @@ canvas {
   z-index: 1; }
 
 .modal-info {
+  overflow-y: auto;
   display: none;
   position: absolute;
   top: 50%;
   left: 50%;
-  margin: -40rem 0 0 -65rem;
-  padding: 10rem 30rem;
+  transform: translate(-50%, -50%);
+  padding: 10rem 20rem;
   z-index: 9;
   opacity: 0.95; }
+  .modal-info h1 {
+    margin-top: 0; }
+    .modal-info h1 span {
+      font-style: italic;
+      font-size: 3em; }
 
 .instructions {
   margin-top: 10rem;
@@ -111,8 +119,8 @@ canvas {
 
 .icon-info {
   position: absolute;
-  top: 158px;
-  right: 230px;
+  bottom: calc(calc(100vh - 200px) + 31px);
+  left: calc(100rem + ((100vw - 100rem) / 2) - 70px);
   width: 35px;
   height: 35px;
   text-align: center;
@@ -130,10 +138,11 @@ canvas {
   background: black; }
 
 .footnote {
-  color: #ccc; }
+  color: #ccc;
+  margin-bottom: 0; }
 
 hr.footnote {
-  margin-top: 21rem; }
+  margin-top: 4em; }
 
 ::-moz-selection {
   background: #b3d4fc;
@@ -175,14 +184,41 @@ textarea {
 
 /* main
 ---------------------------------------------------------------------*/
-a#deck-svg {
-  position: absolute;
-  top: 50%;
-  left: 25%;
-  z-index: 2; }
-
 /* media queries
 ---------------------------------------------------------------------*/
+@media only screen and (max-width: 1200px) {
+  canvas,
+  .modal-info {
+    width: calc(100vw - 200px);
+    height: calc(100vh - 200px); }
+
+  .modal-info {
+    padding: 10rem 6rem; }
+
+  .icon-info {
+    bottom: calc(calc(100vh - 200px) + 31px);
+    left: calc(calc(100vw - 200px) + 30px); } }
+@media only screen and (max-width: 768px) {
+  canvas,
+  .modal-info {
+    width: calc(100vw - 100px);
+    height: calc(100vh - 100px); }
+
+  .modal-info {
+    padding: 10rem 3rem; }
+
+  .icon-info {
+    bottom: calc(calc(100vh - 100px) - 0.5 * 31px);
+    left: calc(calc(100vw - 100px) - 0.5 * 30px); } }
+@media only screen and (max-width: 480px) {
+  canvas,
+  .modal-info {
+    width: 100vw;
+    height: 100vh; }
+
+  .icon-info {
+    bottom: calc(100vh + 31px);
+    left: calc(100vw + 30px); } }
 /* helper classes
 ---------------------------------------------------------------------*/
 .hidden {

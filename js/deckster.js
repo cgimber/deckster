@@ -1,6 +1,6 @@
 /* globals
 =====================================================================*/
-var center = new Point(view.bounds.center);
+var center = view.bounds.center;
 var grid, blank, deck, holes, deckDims, blankDims;
 var deckster = {
     height: 27.5, // inches
@@ -10,9 +10,9 @@ var deckster = {
     isSmooth: false,
     hitOptions: {
         segments: true,
-        stroke: true,
-        fill: true,
-        tolerance: 15
+        stroke: false,
+        fill: false,
+        tolerance: 10
     }
 };
 var colors = {
@@ -244,13 +244,13 @@ function displayDims(item, color) {
 
     // create width items
     var item_bottomLeft, item_bottomRight;
-    if (item.bounds.bottom + dimsPadding >= view.bounds.bottom - dimsMarginY) {
-        item_bottomLeft = new Point(item.bounds.left, view.bounds.bottom - dimsMarginY);
-        item_bottomRight = new Point(item.bounds.right, view.bounds.bottom - dimsMarginY);
-    } else {
+    // if (item.bounds.bottom + dimsPadding >= view.bounds.bottom - dimsMarginY) {
+    //     item_bottomLeft = new Point(item.bounds.left, view.bounds.bottom - dimsMarginY);
+    //     item_bottomRight = new Point(item.bounds.right, view.bounds.bottom - dimsMarginY);
+    // } else {
         item_bottomLeft = item.bounds.bottomLeft + [0, dimsPadding];
         item_bottomRight = item.bounds.bottomRight + [0, dimsPadding];
-    }
+    // }
 
     var wLine = new Path.Line({
         name: 'line_w',
@@ -279,13 +279,13 @@ function displayDims(item, color) {
 
     // create height items
     var item_topLeft, item_bottomLeft;
-    if (item.bounds.left - dimsPadding <= dimsMarginX) {
-        item_topLeft = new Point(dimsMarginX, item.bounds.top);
-        item_bottomLeft = new Point(dimsMarginX, item.bounds.bottom);
-    } else {
+    // if (item.bounds.left - dimsPadding <= dimsMarginX) {
+    //     item_topLeft = new Point(dimsMarginX, item.bounds.top);
+    //     item_bottomLeft = new Point(dimsMarginX, item.bounds.bottom);
+    // } else {
         item_topLeft = item.bounds.topLeft + [-dimsPadding, 0];
         item_bottomLeft = item.bounds.bottomLeft + [-dimsPadding, 0];
-    }
+    // }
 
     var hLine = new Path.Line({
         name: 'line_h',
@@ -392,6 +392,8 @@ function newHandles(line) {
 
 /* GUI
 =====================================================================*/
+var btn_margin = 33;
+
 /* title
 ---------------------------------------------------------------------*/
 var title_t = new PointText({
@@ -627,7 +629,6 @@ function onMouseMove(event) {
     project.activeLayer.selected = false;
     blankDims.visible = false;
     deckDims.visible = false;
-
     if (event.item) {
         if (event.item.name == 'blank') {
             blankDims.visible = true;
@@ -658,6 +659,78 @@ function onMouseDrag(event) {
         deckDims = displayDims(deck);
         checkDeckDims(deck, deckDims);
     }
+}
+
+function onResize() {
+    center = view.bounds.center;
+
+    // reposition
+
+    // ...centered elements
+    blank.position = center;
+    deck.position = center;
+    holes.position = center;
+
+    // resize blank, deck, and holes as a group
+    centerGroup = new Group([blank, deck, holes]);
+
+    if ((centerGroup.bounds.height + 200) >= view.bounds.height) { // shrink to fit view
+        var scalar = view.bounds.height / (centerGroup.bounds.height + 200);
+
+        deckster.height /= deckster.scalar;
+        deckster.width /= deckster.scalar;
+        deckster.wheelBase /= deckster.scalar;
+        deckster.scalar *= scalar;
+        deckster.height *= deckster.scalar;
+        deckster.width *= deckster.scalar;
+        deckster.wheelBase *= deckster.scalar;
+
+        centerGroup.scale(scalar, center);
+
+    } else { // revert back to original dims
+        var scalar = deckster.width / blank.bounds.width;
+
+        deckster.height /= deckster.scalar;
+        deckster.width /= deckster.scalar;
+        deckster.wheelBase /= deckster.scalar;
+        deckster.scalar = 500 / deckster.height;
+        deckster.height *= deckster.scalar;
+        deckster.width *= deckster.scalar;
+        deckster.wheelBase *= deckster.scalar;
+
+        centerGroup.scale(scalar, center);
+    }
+
+    centerGroup.parent.insertChildren(centerGroup.index, centerGroup.removeChildren());
+    centerGroup.remove();
+
+    if (blankDims)
+        blankDims.remove();
+    blankDims = displayDims(blank, colors.blank);
+    blankDims.visible = false;
+
+    if (deckDims)
+        deckDims.remove();
+    deckDims = displayDims(deck, colors.deck);
+    deckDims.visible = false;
+
+    if (grid)
+        grid.remove();
+    grid = newGrid(50, colors.grid);
+
+    title_t.position = view.bounds.topCenter + [0, btn_margin * 1.5];
+
+    // ...right/left aligned elements
+    xSymmetry_btn.position = (xSymmetry_btn.bounds.size / 2) + [btn_margin, btn_margin];
+    smooth_btn.position = xSymmetry_btn.bounds.bottomLeft + smooth_btn.bounds.size / 2 + [0, btn_margin - 3];
+    toggleBlank_btn.position = smooth_btn.bounds.bottomLeft + toggleBlank_btn.bounds.size / 2 + [0, btn_margin - 3];
+    toggleGrid_btn.position = toggleBlank_btn.bounds.bottomLeft + toggleGrid_btn.bounds.size / 2 + [0, btn_margin - 3];
+
+    newDeck_btn.position = view.bounds.bottomLeft + (newDeck_btn.bounds.size * [1 / 2, -1 / 2]) + [btn_margin, -btn_margin + 3];
+    flip_btn.position = newDeck_btn.bounds.bottomRight + (flip_btn.bounds.size * [1 / 2, -1 / 2]) + [btn_margin - 3, 0];
+
+    download_btn.position = view.bounds.bottomRight - (download_btn.bounds.size / 2) - [btn_margin - 3, btn_margin - 3];
+
 }
 
 /* xSymmetry button
@@ -692,10 +765,6 @@ toggleBlank_btn.onMouseEnter = function(event) {
     toggleBlank_t.fillColor = 'white';
 };
 toggleBlank_btn.onMouseLeave = function(event) {
-    // if (blank.visible)
-    //     toggleBlank_bg.fillColor = colors.enabled;
-    // else
-    //     toggleBlank_bg.fillColor = colors.disabled;
     toggleBlank_bg.fillColor = 'white';
     toggleBlank_bg.strokeColor = 'black';
     toggleBlank_t.fillColor = 'black';
@@ -713,10 +782,6 @@ toggleGrid_btn.onMouseEnter = function(event) {
     toggleGrid_t.fillColor = 'white';
 };
 toggleGrid_btn.onMouseLeave = function(event) {
-    // if (grid.visible)
-    //     toggleGrid_bg.fillColor = colors.enabled;
-    // else
-    //     toggleGrid_bg.fillColor = colors.disabled;
     toggleGrid_bg.fillColor = 'white';
     toggleGrid_bg.strokeColor = 'black';
     toggleGrid_t.fillColor = 'black';
@@ -728,8 +793,6 @@ newDeck_btn.onClick = function(event) {
     deck.remove();
     holes.remove();
     deck = newDeck(deckster.width, deckster.height);
-    deckDims = displayDims(deck);
-    checkDeckDims(deck, deckDims);
 };
 // hover state
 newDeck_btn.onMouseEnter = function(event) {
@@ -790,7 +853,15 @@ flip_btn.onMouseLeave = function(event) {
 /* download button
 ---------------------------------------------------------------------*/
 download_btn.onClick = function(event) {
-    downloadAsSVG('deck');
+    exportGroup = new Group({
+        name: 'export_group'
+    });
+    deck.copyTo(exportGroup);
+    holes.copyTo(exportGroup);
+
+    downloadAsSVG(exportGroup);
+
+    exportGroup.remove();
 };
 // hover state
 download_btn.onMouseEnter = function(event) {
@@ -807,15 +878,18 @@ download_btn.onMouseLeave = function(event) {
 /* functions
 ---------------------------------------------------------------------*/
 // save SVG from paper.js as a file via FileSaver.js
-function downloadAsSVG(itemID) {
-    var target, fileName;
-    if (!itemID) {
+function downloadAsSVG(item) {
+    var target = project.activeLayer.children[item.name];
+    var fileName;
+    if (target.className === 'Group') {
+        var hInches = truncateDecimals(deck.bounds.height / deckster.scalar, 2) + 'in';
+        var wInches = truncateDecimals(deck.bounds.width / deckster.scalar, 2) + 'in';
+        fileName = 'deck_' + hInches + '_x_' + wInches + '.svg';
+    } else {
         target = project.activeLayer.children['deck'];
         fileName = 'deck.svg';
-    } else {
-        target = project.activeLayer.children[itemID];
-        fileName = itemID + '.svg';
     }
+
     var svg = '<svg x="0" y="0" width="800" height="800" version="1.1" xmlns="http://www.w3.org/2000/svg">' + target.exportSVG({ asString: true }) + '</svg>';
     var blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 
