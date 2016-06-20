@@ -181,6 +181,8 @@ function newDeck(w, h) {
     // }
     // d.subtract(holes);
 
+    if (deckDims)
+        deckDims.remove();
     deckDims = displayDims(d);
     checkDeckDims(d, deckDims);
 
@@ -655,7 +657,8 @@ function onMouseDrag(event) {
 
         if (deckster.isSmooth)
             path.smooth();
-
+        if (deckDims)
+            deckDims.remove();
         deckDims = displayDims(deck);
         checkDeckDims(deck, deckDims);
     }
@@ -815,6 +818,8 @@ smooth_btn.onClick = function(event) {
         deck.smooth();
 
     deckster.isSmooth = !deckster.isSmooth;
+    if (deckDims)
+        deckDims.remove();
     deckDims = displayDims(deck);
     checkDeckDims(deck, deckDims);
 };
