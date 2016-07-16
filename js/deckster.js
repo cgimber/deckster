@@ -3,9 +3,9 @@
 var center = view.bounds.center;
 var grid, blank, deck, holes, deckDims, blankDims;
 var deckster = {
-    height: 27.5, // inches
     width: 8.5, // inches
-    wheelBase: 15, // inches
+    height: 30, // inches
+    wheelBase: 14, // inches
     xSymmetry: true,
     isSmooth: false,
     hitOptions: {
@@ -25,6 +25,31 @@ var colors = {
     transparent: new Color(1, 1, 1, 0),
     grey_50: new Color(0, 0, 0, 0.25)
 };
+
+// update values for current view
+console.log('you can change the default width and height values with a url query:');
+console.log('e.g. deckster.christiangimber.com/?w=9.5&h=35');
+
+if (document.URL.split('?')[1]) {
+    var query = {
+        parameters: document.URL.split('?')[1].split('&')
+    };
+
+    if (query.parameters.length === 2) {
+        query.width = query.parameters[0].split('w=')[1];
+        query.height = query.parameters[1].split('h=')[1];
+    }
+
+    if (query.width && query.height) {
+        console.log('user defined width = ' + query.width);
+        console.log('user defined height = ' + query.height);
+        deckster.width = query.width;
+        deckster.height = query.height;
+    }
+    else
+        console.error('it looks like your query is not formatted correctly; please refer to the example above :)');
+}
+
 deckster.scalar = 500 / deckster.height; // pixels : inches
 deckster.height *= deckster.scalar;
 deckster.width *= deckster.scalar;
@@ -246,13 +271,9 @@ function displayDims(item, color) {
 
     // create width items
     var item_bottomLeft, item_bottomRight;
-    // if (item.bounds.bottom + dimsPadding >= view.bounds.bottom - dimsMarginY) {
-    //     item_bottomLeft = new Point(item.bounds.left, view.bounds.bottom - dimsMarginY);
-    //     item_bottomRight = new Point(item.bounds.right, view.bounds.bottom - dimsMarginY);
-    // } else {
-        item_bottomLeft = item.bounds.bottomLeft + [0, dimsPadding];
-        item_bottomRight = item.bounds.bottomRight + [0, dimsPadding];
-    // }
+
+    item_bottomLeft = item.bounds.bottomLeft + [0, dimsPadding];
+    item_bottomRight = item.bounds.bottomRight + [0, dimsPadding];
 
     var wLine = new Path.Line({
         name: 'line_w',
@@ -281,13 +302,9 @@ function displayDims(item, color) {
 
     // create height items
     var item_topLeft, item_bottomLeft;
-    // if (item.bounds.left - dimsPadding <= dimsMarginX) {
-    //     item_topLeft = new Point(dimsMarginX, item.bounds.top);
-    //     item_bottomLeft = new Point(dimsMarginX, item.bounds.bottom);
-    // } else {
-        item_topLeft = item.bounds.topLeft + [-dimsPadding, 0];
-        item_bottomLeft = item.bounds.bottomLeft + [-dimsPadding, 0];
-    // }
+
+    item_topLeft = item.bounds.topLeft + [-dimsPadding, 0];
+    item_bottomLeft = item.bounds.bottomLeft + [-dimsPadding, 0];
 
     var hLine = new Path.Line({
         name: 'line_h',
@@ -326,7 +343,7 @@ function displayDims(item, color) {
 ---------------------------------------------------------------------*/
 function checkDeckDims(deckItem, deckDims) {
     if (!deckItem.isInside(blank.bounds)) {
-        console.log("OH SHIZAH: this deck won't fit on your blank");
+        console.error("OH SHIZAH: this deck won't fit on your blank");
 
         var wGroup = deckDims.children['width'];
         var wLine = wGroup.children['line_w'];
