@@ -26,28 +26,40 @@ var colors = {
     grey_50: new Color(0, 0, 0, 0.25)
 };
 
-// update values for current view
-console.log('you can change the default width and height values with a url query:');
-console.log('e.g. deckster.christiangimber.com/?w=9.5&h=35');
+/* update globals for current view
+---------------------------------------------------------------------*/
+console.log('you can change the default width, height, and wheel base with a url query:');
+console.log('e.g. deckster.christiangimber.com/?width=9.5&height=35&wheelBase=13');
 
-if (document.URL.split('?')[1]) {
+if (document.URL.split('?')[1]) { // check for query string
     var query = {
         parameters: document.URL.split('?')[1].split('&')
     };
 
+    // split the values from the parameter names
     if (query.parameters.length === 2) {
-        query.width = query.parameters[0].split('w=')[1];
-        query.height = query.parameters[1].split('h=')[1];
+        query.width = query.parameters[0].split('width=')[1];
+        query.height = query.parameters[1].split('height=')[1];
+    } else if (query.parameters.length === 3) {
+        query.width = query.parameters[0].split('width=')[1];
+        query.height = query.parameters[1].split('height=')[1];
+        query.wheelBase = query.parameters[2].split('wheelBase=')[1];
     }
-
-    if (query.width && query.height) {
+    // update the corresponding values and log to the console
+    if (query.width && query.height && !query.wheelBase) {
         console.log('user defined width = ' + query.width);
         console.log('user defined height = ' + query.height);
         deckster.width = query.width;
         deckster.height = query.height;
-    }
-    else
-        console.error('it looks like your query is not formatted correctly; please refer to the example above :)');
+    } else if (query.width && query.height && query.wheelBase) {
+        console.log('user defined width = ' + query.width);
+        console.log('user defined height = ' + query.height);
+        console.log('user defined wheelBase = ' + query.wheelBase);
+        deckster.width = query.width;
+        deckster.height = query.height;
+        deckster.wheelBase = query.wheelBase;
+    } else
+        console.error('WHOOPS: it looks like your query is not formatted correctly; please refer to the example above :)');
 }
 
 deckster.scalar = 500 / deckster.height; // pixels : inches
