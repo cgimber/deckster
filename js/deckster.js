@@ -31,36 +31,16 @@ var colors = {
 console.log('you can change the default width, height, and wheel base with a url query:');
 console.log('e.g. deckster.christiangimber.com/?width=9.5&height=35&wheelBase=13');
 
-if (document.URL.split('?')[1]) { // check for query string
-    var query = {
-        parameters: document.URL.split('?')[1].split('&')
-    };
+var query = QueryStringToJSON();
+console.log("user defined values:", query);
 
-    // split the values from the parameter names
-    if (query.parameters.length === 2) {
-        query.width = query.parameters[0].split('width=')[1];
-        query.height = query.parameters[1].split('height=')[1];
-    } else if (query.parameters.length === 3) {
-        query.width = query.parameters[0].split('width=')[1];
-        query.height = query.parameters[1].split('height=')[1];
-        query.wheelBase = query.parameters[2].split('wheelBase=')[1];
-    }
-    // update the corresponding values and log to the console
-    if (query.width && query.height && !query.wheelBase) {
-        console.log('user defined width = ' + query.width);
-        console.log('user defined height = ' + query.height);
-        deckster.width = query.width;
-        deckster.height = query.height;
-    } else if (query.width && query.height && query.wheelBase) {
-        console.log('user defined width = ' + query.width);
-        console.log('user defined height = ' + query.height);
-        console.log('user defined wheelBase = ' + query.wheelBase);
-        deckster.width = query.width;
-        deckster.height = query.height;
-        deckster.wheelBase = query.wheelBase;
-    } else
-        console.error('WHOOPS: it looks like your query is not formatted correctly; please refer to the example above :)');
-}
+// update the corresponding values and log to the console
+if (query.width)
+    deckster.width = query.width;
+if (query.height)
+    deckster.height = query.height;
+if (query.wheelBase)
+    deckster.wheelBase = query.wheelBase;
 
 deckster.scalar = 500 / deckster.height; // pixels : inches
 deckster.height *= deckster.scalar;
@@ -911,6 +891,20 @@ download_btn.onMouseLeave = function(event) {
 
 /* functions
 ---------------------------------------------------------------------*/
+// parse query string and then convert to a JSON object
+// via Jonny Schnittger
+function QueryStringToJSON() {
+    var pairs = location.search.slice(1).split('&');
+
+    var result = {};
+    pairs.forEach(function(pair) {
+        pair = pair.split('=');
+        result[pair[0]] = decodeURIComponent(pair[1] || '');
+    });
+
+    return JSON.parse(JSON.stringify(result));
+}
+
 // save SVG from paper.js as a file via FileSaver.js
 function downloadAsSVG(item) {
     var target = project.activeLayer.children[item.name];
